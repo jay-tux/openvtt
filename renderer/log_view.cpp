@@ -36,7 +36,7 @@ void log_view::render() {
     for (const auto &[src, msg, t]: recent_logs) {
       ImGui::TextColored(color_for(t), "[%10s]: %s", src.c_str(), msg.c_str());
     }
-    ImGui::EndChild();
   }
+  ImGui::EndChild();
   ImGui::End();
 }

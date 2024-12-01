@@ -24,7 +24,10 @@ inline const std::string &exe_dir() {
 }
 
 enum struct asset_type {
-  FONT
+  FONT,
+  VERT_SHADER, FRAG_SHADER,
+  TEXTURE_PNG,
+  MODEL_OBJ
 };
 
 template <asset_type type>
@@ -32,6 +35,10 @@ inline std::string asset_path(const std::string &asset_name) {
   constexpr static auto type_to_dir = [](const asset_type t) {
     switch (t) {
       case asset_type::FONT: return "/fonts/";
+      case asset_type::VERT_SHADER:
+      case asset_type::FRAG_SHADER: return "/shaders/";
+      case asset_type::TEXTURE_PNG: return "/textures/";
+      case asset_type::MODEL_OBJ: return "/models/";
       default: return "";
     }
   };
@@ -39,6 +46,10 @@ inline std::string asset_path(const std::string &asset_name) {
   constexpr static auto type_to_ext = [](const asset_type t) {
     switch (t) {
       case asset_type::FONT: return "ttf";
+      case asset_type::VERT_SHADER: return "vs.glsl";
+      case asset_type::FRAG_SHADER: return "fs.glsl";
+      case asset_type::TEXTURE_PNG: return "png";
+      case asset_type::MODEL_OBJ: return "obj";
       default: return "";
     }
   };

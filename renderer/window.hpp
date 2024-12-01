@@ -31,6 +31,11 @@ public:
   template <std::invocable F>
   void with_nerd_icons(F &&f) const { ImGui::PushFont(nerd_icons_font); f(); ImGui::PopFont(); }
 
+  [[nodiscard]] float get_time() const;
+  [[nodiscard]] float aspect_ratio() const;
+  [[nodiscard]] float delta_time_ms() const;
+  [[nodiscard]] float delta_time_s() const;
+
   bool frame_pre();
   void frame_post();
 

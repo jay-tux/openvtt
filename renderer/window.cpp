@@ -2,6 +2,7 @@
 // Created by jay on 11/29/24.
 //
 
+// ReSharper disable CppMemberFunctionMayBeStatic
 #include <glad/glad.h>
 #include <stdexcept>
 #include <imgui.h>
@@ -29,6 +30,8 @@ window::window() {
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+  // Surprisingly fun + useful to debug B/W textures
+  // glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GL_TRUE);
 
   win = glfwCreateWindow(1920, 1080, "OpenGL VTT", nullptr, nullptr);
   if (!win) {
@@ -42,6 +45,8 @@ window::window() {
     glfwTerminate();
     throw std::runtime_error("Failed to initialize GLAD");
   }
+
+  glEnable(GL_DEPTH_TEST);
 
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
@@ -72,6 +77,22 @@ window::~window() {
   glfwTerminate();
 }
 
+float window::get_time() const { // NOLINT(*-convert-member-functions-to-static)
+  return static_cast<float>(ImGui::GetTime());
+}
+
+float window::aspect_ratio() const {
+  return io->DisplaySize.x / io->DisplaySize.y;
+}
+
+float window::delta_time_ms() const {
+  return io->DeltaTime * 1000.0f;
+}
+
+float window::delta_time_s() const {
+  return io->DeltaTime;
+}
+
 bool window::frame_pre() {
   glfwPollEvents();
   if (glfwGetKey(win, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
@@ -87,6 +108,10 @@ bool window::frame_pre() {
   ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();
   ImGui::PushFont(jb_mono_font);
+  int w, h;
+  glfwGetFramebufferSize(win, &w, &h);
+  glViewport(0, 0, w, h);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   return true;
 }
 
@@ -94,10 +119,6 @@ bool window::frame_pre() {
 void window::frame_post() {
   ImGui::PopFont();
   ImGui::Render();
-  int w, h;
-  glfwGetFramebufferSize(win, &w, &h);
-  glViewport(0, 0, w, h);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
   glfwSwapBuffers(win);
 }
