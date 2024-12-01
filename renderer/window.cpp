@@ -33,7 +33,7 @@ window::window() {
   // Surprisingly fun + useful to debug B/W textures
   // glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GL_TRUE);
 
-  win = glfwCreateWindow(1920, 1080, "OpenGL VTT", nullptr, nullptr);
+  win = glfwCreateWindow(1920, 1080, "OpenVTT", nullptr, nullptr);
   if (!win) {
     glfwTerminate();
     throw std::runtime_error("Failed to open GLFW3 window");

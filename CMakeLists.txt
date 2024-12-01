@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.30)
 set(CMAKE_PROJECT_TOP_LEVEL_INCLUDES conan_provider.cmake)
-project(gltt)
+project(openvtt)
 
 find_package(opengl_system)
 find_package(glfw3)
@@ -13,11 +13,11 @@ find_package(stb)
 
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-set(GLTT_USE_STACK_TRACE OFF CACHE BOOL "Use C++23 stack trace library")
+set(openvtt_USE_STACK_TRACE OFF CACHE BOOL "Use C++23 stack trace library")
 
 set(CMAKE_CXX_STANDARD 23)
 
-add_executable(gltt
+add_executable(openvtt
         # explicit dependencies (ImGui)
         bindings/imgui_impl_glfw.cpp
         bindings/imgui_impl_opengl3.cpp
@@ -36,9 +36,9 @@ add_executable(gltt
         renderer/renderable.cpp
 )
 
-target_include_directories(gltt PRIVATE ${CMAKE_SOURCE_DIR})
+target_include_directories(openvtt PRIVATE ${CMAKE_SOURCE_DIR})
 
-target_link_libraries(gltt PRIVATE
+target_link_libraries(openvtt PRIVATE
         imgui::imgui
         glm::glm
         opengl::opengl
@@ -49,9 +49,9 @@ target_link_libraries(gltt PRIVATE
         stb::stb
 )
 
-if (GLTT_USE_STACK_TRACE)
-    target_link_libraries(gltt PRIVATE stdc++exp)
-    target_compile_definitions(gltt PRIVATE GLTT_USE_STACK_TRACE)
+if (openvtt_USE_STACK_TRACE)
+    target_link_libraries(openvtt PRIVATE stdc++exp)
+    target_compile_definitions(openvtt PRIVATE openvtt_USE_STACK_TRACE)
 endif ()
 
 file(CREATE_LINK "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/assets" COPY_ON_ERROR SYMBOLIC)
