@@ -13,7 +13,7 @@
 #include "filesys.hpp"
 #include "log_view.hpp"
 
-using namespace gltt::renderer;
+using namespace openvtt::renderer;
 
 window &window::get() {
   static window w;

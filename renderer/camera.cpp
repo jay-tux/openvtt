@@ -4,7 +4,7 @@
 
 #include "camera.hpp"
 
-using namespace gltt::renderer;
+using namespace openvtt::renderer;
 
 void camera::handle_input() {
   if (ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow)) return; // let ImGui handle input

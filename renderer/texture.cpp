@@ -8,7 +8,7 @@
 #include "gl_wrapper.hpp"
 #include "filesys.hpp"
 
-using namespace gltt::renderer;
+using namespace openvtt::renderer;
 
 texture::texture(const std::string &asset) {
   log<log_type::DEBUG>("texture", std::format("Loading texture '{}'", asset));

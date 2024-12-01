@@ -10,40 +10,78 @@
 #include <iostream>
 #include <format>
 
-namespace gltt::renderer {
+namespace openvtt::renderer {
+/**
+ * @brief Enum class representing different types of log messages.
+ */
 enum class log_type {
-  DEBUG, INFO, WARNING, ERROR
+  DEBUG,   /**< Debug level log message */
+  INFO,    /**< Informational log message */
+  WARNING, /**< Warning level log message */
+  ERROR    /**< Error level log message */
 };
 
+/**
+ * @brief Struct representing a log message.
+ */
 struct log_message {
-  std::string source;
-  std::string message;
-  log_type type = log_type::INFO;
+  std::string source; //!< Source of the log message
+  std::string message; //!< Message to be logged
+  log_type type = log_type::INFO; //!< Type of the message
 };
 
+/**
+ * @brief Class to handle logging and rendering log messages.
+ */
 class log_view {
 public:
+  /**
+   * @brief Overloaded operator to log a message.
+   * @param message The message to be logged.
+   * @return Reference to the log_view object.
+   */
   inline log_view &operator<<(const log_message &message) {
     log(message);
     return *this;
   }
 
+  /**
+   * @brief Clears the log, removing all messages.
+   */
   static inline void clear() {
     recent_logs.clear();
   }
 
+  /**
+   * @brief Logs a message.
+   * @param message The message to be logged.
+   *
+   * This message is both added to the (internal) list of logs to be rendered, and printed to the console.
+   */
   static inline void log(const log_message &message) {
     recent_logs.push_back(message);
     std::cout << std::format("[{:10s}]: {}\n", message.source, message.message);
   }
 
+  /**
+   * @brief Renders the log messages.
+   */
   static void render();
 private:
   static inline std::vector<log_message> recent_logs{};
 };
 
+/**
+ * @brief Global log_view object to be used for logging.
+ */
 static inline log_view logger;
 
+/**
+ * @brief Logs a message with the given source and message.
+ * @tparam type The type of the log message.
+ * @param source The source of the log message.
+ * @param message The message to be logged.
+ */
 template <log_type type>
 inline void log(const std::string &source, const std::string &message) {
   logger << log_message{source, message, type};

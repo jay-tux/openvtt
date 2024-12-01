@@ -4,7 +4,7 @@
 
 #include "renderable.hpp"
 
-using namespace gltt::renderer;
+using namespace openvtt::renderer;
 
 namespace {
 void color_picker_dialog(const char *label, glm::vec3 &color) {

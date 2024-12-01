@@ -7,7 +7,7 @@
 #include "log_view.hpp"
 #include "window.hpp"
 
-using namespace gltt::renderer;
+using namespace openvtt::renderer;
 
 namespace {
 constexpr ImVec4 color_for(const log_type t) {

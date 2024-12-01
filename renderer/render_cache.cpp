@@ -6,7 +6,7 @@
 
 #include "render_cache.hpp"
 
-using namespace gltt::renderer;
+using namespace openvtt::renderer;
 
 void render_cache::detail_window() {
   ImGui::Begin("Render Cache Contents");

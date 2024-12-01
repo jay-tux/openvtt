@@ -8,7 +8,15 @@
 #include <string>
 #include <whereami.h>
 
-namespace gltt {
+/**
+* @brief Main namespace for the OpenVTT project.
+*/
+namespace openvtt {
+/**
+* @brief Returns the directory of the executable.
+*
+* This value is only computed once, then cached for future calls.
+*/
 inline const std::string &exe_dir() {
   static std::string dir = [] {
     const int l = wai_getExecutablePath(nullptr, 0, nullptr);
@@ -23,13 +31,25 @@ inline const std::string &exe_dir() {
   return dir;
 }
 
+/**
+* @brief Supported asset types.
+*/
 enum struct asset_type {
-  FONT,
-  VERT_SHADER, FRAG_SHADER,
-  TEXTURE_PNG,
-  MODEL_OBJ
+  FONT, //!< TTF Font (TrueType), in the /assets/fonts/ directory, using the .ttf extension.
+  VERT_SHADER, //!< Vertex shader, in the /assets/shaders/ directory, using the .vs.glsl extension.
+  FRAG_SHADER, //!< Fragment shader, in the /assets/shaders/ directory, using the .fs.glsl extension.
+  TEXTURE_PNG, //!< PNG Texture, in the /assets/textures/ directory, using the .png extension.
+  MODEL_OBJ //!< Wavefront OBJ Model, in the /assets/models/ directory, using the .obj extension.
 };
 
+/**
+* @brief Returns the full, absolute path to an asset.
+* @tparam type The type of asset.
+* @param asset_name The name of the asset.
+*
+* This function will use the `type` parameter to determine the directory and extension of the asset. Only pass the name
+* of the file, without the directory (unless you're using a subdirectory) or extension.
+*/
 template <asset_type type>
 inline std::string asset_path(const std::string &asset_name) {
   constexpr static auto type_to_dir = [](const asset_type t) {

@@ -5,7 +5,7 @@
 #include "fps_counter.hpp"
 #include "window.hpp"
 
-using namespace gltt::renderer;
+using namespace openvtt::renderer;
 
 void fps_counter::render() {
   const auto &io = window::get().io_data();

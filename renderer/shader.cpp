@@ -12,7 +12,7 @@
 #include "filesys.hpp"
 #include "shader.hpp"
 
-using namespace gltt::renderer;
+using namespace openvtt::renderer;
 
 shader::shader(const std::string &vs, const std::string &fs) {
   window::get(); // force initialized

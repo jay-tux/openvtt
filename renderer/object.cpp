@@ -11,7 +11,7 @@
 #include "object.hpp"
 #include "filesys.hpp"
 
-using namespace gltt::renderer;
+using namespace openvtt::renderer;
 
 render_object::render_object(const std::vector<vertex_spec> &vs, const std::vector<unsigned int> &index) : elements{index.size()} {
   window::get(); // force initialized

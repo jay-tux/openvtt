@@ -5,7 +5,7 @@
 #include "renderer/log_view.hpp"
 #include "renderer/renderable.hpp"
 
-using namespace gltt::renderer;
+using namespace openvtt::renderer;
 
 int main(int argc, const char **argv) {
   using cache = render_cache;
