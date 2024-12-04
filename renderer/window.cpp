@@ -3,7 +3,9 @@
 //
 
 // ReSharper disable CppMemberFunctionMayBeStatic
-#include <glad/glad.h>
+
+#include "gl_wrapper.hpp"
+
 #include <stdexcept>
 #include <imgui.h>
 #include <bindings/imgui_impl_glfw.h>
@@ -41,7 +43,7 @@ window::window() {
   glfwMakeContextCurrent(win);
   glfwSwapInterval(1); // VSync
 
-  if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {
+  if (gladLoadGL(glfwGetProcAddress) == 0) {
     glfwTerminate();
     throw std::runtime_error("Failed to initialize GLAD");
   }

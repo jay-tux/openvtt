@@ -96,6 +96,9 @@ shader shader::from_assets(const std::string &vsf, const std::string &fsf) {
   return {v_src, f_src};
 }
 
+void shader::set_bool(const unsigned int loc, const bool b) const {
+  activate(); gl(glUniform1i(loc, b));
+}
 void shader::set_int(const unsigned int loc, const int i) const {
   activate(); gl(glUniform1i(loc, i));
 }

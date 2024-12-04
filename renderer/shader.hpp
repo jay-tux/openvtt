@@ -45,6 +45,7 @@ public:
    */
   [[nodiscard]] unsigned int loc_for(const std::string &name) const;
 
+  void set_bool(unsigned int loc, bool b) const;
   /**
    * @brief Sets the uniform with the given location to the given value.
    * @param loc The location of the uniform.

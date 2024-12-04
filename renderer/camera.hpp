@@ -25,7 +25,7 @@ struct camera {
   glm::vec3 forward = normalize(glm::vec3{0,0,0} - position); //!< The forward vector of the camera.
   // glm::vec3 up{0,1,0}; // up is always positive Y
   float speed = 1.0f; //!< The movement speed of the camera.
-  float rot_speed = 1.5f; //!< The rotation speed of the camera.
+  float rot_speed = 3.5f; //!< The rotation speed of the camera.
   float zoom_speed = 2.0f; //!< The zoom speed of the camera.
 
   /**

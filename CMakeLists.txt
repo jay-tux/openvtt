@@ -6,7 +6,6 @@ find_package(Doxygen)
 
 find_package(opengl_system REQUIRED)
 find_package(glfw3 REQUIRED)
-find_package(glad REQUIRED)
 find_package(imgui REQUIRED)
 find_package(glm REQUIRED)
 find_package(whereami REQUIRED)
@@ -36,6 +35,10 @@ add_executable(openvtt
         renderer/stb_impl.cpp
         renderer/render_cache.cpp
         renderer/renderable.cpp
+        renderer/collider.cpp
+        renderer/collider.hpp
+        renderer/fbo.cpp
+        renderer/glad.cpp
 )
 
 target_include_directories(openvtt PRIVATE ${CMAKE_SOURCE_DIR})
@@ -45,7 +48,6 @@ target_link_libraries(openvtt PRIVATE
         glm::glm
         opengl::opengl
         glfw
-        glad::glad
         whereami::whereami
         assimp::assimp
         stb::stb

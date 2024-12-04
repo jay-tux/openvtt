@@ -9,7 +9,7 @@
 #include <ranges>
 #include <stacktrace>
 #endif
-#include <glad/glad.h>
+#include "glad.h"
 #include "log_view.hpp"
 
 namespace openvtt::renderer {

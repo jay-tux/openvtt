@@ -8,7 +8,7 @@
 #include <glm/glm.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/euler_angles.hpp>
-#include <unordered_map>
+#include <optional>
 #include <utility>
 
 #include "log_view.hpp"
@@ -81,6 +81,15 @@ struct renderable {
   ) : obj{o}, sh{s}, textures{ts}, name{std::move(name)}, model_loc{uniforms.model}, view_loc{uniforms.view}, proj_loc{uniforms.projection},
       model_inv_t_loc{uniforms.model_inv_t} {}
 
+  inline glm::mat4 model() const {
+    return translate(
+      glm::scale(
+        glm::yawPitchRoll(rotation.x, rotation.y, rotation.z),
+        scale),
+      position
+    );
+  }
+
   /**
    * @brief Draw the renderable.
    * @param cam The camera to use for drawing.
@@ -110,16 +119,11 @@ struct renderable {
     if (!active) return;
 
     sh->activate();
-    const glm::mat4 model = translate(
-      glm::scale(
-        glm::yawPitchRoll(rotation.x, rotation.y, rotation.z),
-        scale),
-      position
-    );
 
-    sh->set_mat4(model_loc, model);
+    const auto m = model();
+    sh->set_mat4(model_loc, m);
     cam.set_matrices(*sh, view_loc, proj_loc);
-    sh->set_mat3(model_inv_t_loc, glm::mat3(transpose(inverse(model))));
+    sh->set_mat3(model_inv_t_loc, glm::mat3(transpose(inverse(m))));
     f(sh);
     int i = 0;
     for (const auto &[loc, tex] : textures) {
@@ -139,6 +143,8 @@ struct renderable {
   glm::vec3 position{0,0,0}; //!< The position of the renderable.
   glm::vec3 rotation{0, 0, 0}; //!< The rotation of the renderable.
   glm::vec3 scale{1,1,1}; //!< The scale of the renderable.
+
+  std::optional<collider_ref> coll = std::nullopt;
 
   unsigned int model_loc; //!< The location of the model matrix uniform.
   unsigned int view_loc; //!< The location of the view matrix uniform.

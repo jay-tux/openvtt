@@ -7,6 +7,5 @@ requirements:
   - "whereami/cci.20220112"
   - "glm/1.0.1"
   - "imgui/1.91.4"
-  - "glad/0.1.36"
   - "glfw/3.3.8"
   - "opengl/system"
