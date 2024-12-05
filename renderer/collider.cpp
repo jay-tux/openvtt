@@ -12,6 +12,15 @@
 
 using namespace openvtt::renderer;
 
+namespace {
+constexpr glm::vec3 element_min(const glm::vec3 &a, const glm::vec3 &b) {
+  return {std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z)};
+}
+constexpr glm::vec3 element_max(const glm::vec3 &a, const glm::vec3 &b) {
+  return {std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z)};
+}
+}
+
 collider::collider(const std::vector<glm::vec3> &vertices, const std::vector<unsigned int> &indices)
   : vertices{vertices}, indices{indices} {
   gl(glGenVertexArrays(1, &vao));
@@ -23,13 +32,8 @@ collider::collider(const std::vector<glm::vec3> &vertices, const std::vector<uns
   for (const auto &v : vertices) {
     v_data.push_back(v.x); v_data.push_back(v.y); v_data.push_back(v.z);
 
-    if (v.x < min.x) min.x = v.x;
-    if (v.y < min.y) min.y = v.y;
-    if (v.z < min.z) min.z = v.z;
-
-    if (v.x > max.x) max.x = v.x;
-    if (v.y > max.y) max.y = v.y;
-    if (v.z > max.z) max.z = v.z;
+    min = element_min(min, v);
+    max = element_max(max, v);
   }
 
   gl(glGenBuffers(1, &vbo));
@@ -105,19 +109,24 @@ void collider::draw() const {
 
 float collider::ray_intersect(const ray &r, const glm::mat4 &model) const {
   // --- Check if the ray hits the (transformed) AABB ---
-  const glm::vec3 alt_min{model * glm::vec4(min, 1.0f)};
-  glm::vec3 aabb_min = alt_min;
-  glm::vec3 aabb_max = alt_min;
-  for (int i = 0b001; i <= 0b111; i++) { // skip checking 0b000 = min, done already
-    const glm::vec3 v{i&1!=0 ? max.x : min.x, i&2!=0 ? max.y : min.y, i&4!=0 ? max.z : min.z};
 
-    if (v.x < aabb_min.x) aabb_min.x = v.x;
-    if (v.y < aabb_min.y) aabb_min.y = v.y;
-    if (v.z < aabb_min.z) aabb_min.z = v.z;
+  const glm::vec3 transformed[8] {
+    {model * glm::vec4(min.x, min.y, min.z, 1.0f)},
+    {model * glm::vec4(min.x, min.y, max.z, 1.0f)},
+    {model * glm::vec4(min.x, max.y, min.z, 1.0f)},
+    {model * glm::vec4(min.x, max.y, max.z, 1.0f)},
+    {model * glm::vec4(max.x, min.y, min.z, 1.0f)},
+    {model * glm::vec4(max.x, min.y, max.z, 1.0f)},
+    {model * glm::vec4(max.x, max.y, min.z, 1.0f)},
+    {model * glm::vec4(max.x, max.y, max.z, 1.0f)}
+  };
 
-    if (v.x > aabb_max.x) aabb_max.x = v.x;
-    if (v.y > aabb_max.y) aabb_max.y = v.y;
-    if (v.z > aabb_max.z) aabb_max.z = v.z;
+  glm::vec3 aabb_min = transformed[0];
+  glm::vec3 aabb_max = transformed[0];
+
+  for (int i = 1; i < 8; i++) {
+    aabb_min = element_min(aabb_min, transformed[i]);
+    aabb_max = element_max(aabb_max, transformed[i]);
   }
 
   const float tx1 = (aabb_min.x - r.point().x) * r.inv_dir().x;

@@ -1,6 +1,6 @@
 #version 460
 
-layout(location =  3) uniform bool highlighted;
+layout(location =  5) uniform bool highlighted;
 
 out vec4 frag_color;
 

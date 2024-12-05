@@ -2,6 +2,7 @@
 // Created by jay on 11/30/24.
 //
 
+#include "gl_wrapper.hpp"
 #include <imgui.h>
 
 #include "render_cache.hpp"
@@ -55,7 +56,6 @@ render_ref render_cache::duplicate(const render_ref &ref, const std::string &nam
   return render_ref{renderables.size() - 1};
 }
 
-
 void render_cache::draw_colliders(const camera &cam) {
   static unsigned int model_loc, view_loc, proj_loc, highlighted_loc;
 
@@ -75,6 +75,7 @@ void render_cache::draw_colliders(const camera &cam) {
 
   for (const auto &r : renderables) {
     if (r.active && r.coll.has_value()) {
+      sh.activate();
       sh.set_mat4(model_loc, r.model());
       sh.set_bool(highlighted_loc, (*r.coll)->is_hovered);
       (*r.coll)->draw();
@@ -85,6 +86,7 @@ void render_cache::draw_colliders(const camera &cam) {
 std::optional<render_ref> render_cache::mouse_over(const camera &cam) {
   // --- Construct camera to mouse ray ---
   const auto &io = window::get().io_data();
+
   const auto mouse = io.MousePos;
   const auto w_h = io.DisplaySize;
   const glm::vec2 ndc = { 2 * mouse.x / w_h.x - 1, 1 - 2 * mouse.y / w_h.y };
@@ -100,17 +102,20 @@ std::optional<render_ref> render_cache::mouse_over(const camera &cam) {
   const glm::vec3 dir = normalize(far_world - near_world);
   const ray r{cam.position, dir};
 
+
   // --- Check for collisions ---
   std::optional<render_ref> res = std::nullopt;
   float t_dist = INFINITY;
   for (size_t i = 0; i < renderables.size(); i++) {
     if (renderables[i].coll.has_value()) {
       const float d = (*renderables[i].coll)->ray_intersect(r, renderables[i].model());
+
       if (d < t_dist) {
         t_dist = d;
         res = render_ref{i};
       }
     }
   }
+
   return res;
 }

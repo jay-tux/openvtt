@@ -60,7 +60,7 @@ public:
    */
   static inline void log(const log_message &message) {
     recent_logs.push_back(message);
-    std::cout << std::format("[{:10s}]: {}\n", message.source, message.message);
+    std::cout << std::format("[{:10.10s}]: {}\n", message.source, message.message);
   }
 
   /**

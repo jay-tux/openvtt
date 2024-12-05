@@ -34,7 +34,7 @@ void log_view::render() {
   ImGui::SameLine();
   if (ImGui::BeginChild("Scrolling")) {
     for (const auto &[src, msg, t]: recent_logs) {
-      ImGui::TextColored(color_for(t), "[%10s]: %s", src.c_str(), msg.c_str());
+      ImGui::TextColored(color_for(t), "[%10.10s]: %s", src.c_str(), msg.c_str());
     }
   }
   ImGui::EndChild();

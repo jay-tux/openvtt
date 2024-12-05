@@ -46,6 +46,7 @@ public:
   [[nodiscard]] float ray_intersect(const ray &r, const glm::mat4 &model) const;
 
   void draw() const;
+  [[nodiscard]] constexpr std::pair<glm::vec3, glm::vec3> aabb() const { return {min, max}; }
 
   ~collider();
 
