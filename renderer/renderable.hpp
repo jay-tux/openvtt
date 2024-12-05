@@ -286,7 +286,7 @@ public:
  * @brief Sets up Phong shading for a shader.
  *
  * @tparam point_light_count The number of point lights to support.
- * @tparam F A callable type `(const shader_ref &) -> void`.
+ * @tparam F A callable type `(const shader_ref &, const renderable &) -> void`.
  * @param cam The camera to use for setting up the shader.
  * @param lighting The Phong lighting settings.
  * @param f A function to perform additional shader setup.

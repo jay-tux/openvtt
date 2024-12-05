@@ -256,6 +256,17 @@ public:
     return render_ref{renderables.size() - 1};
   }
 
+  /**
+   * @brief Duplicate a renderable in the cache.
+   * @param ref The reference to the renderable to duplicate.
+   * @param name The name of the new renderable.
+   * @param pos The position of the new renderable; if not provided, the position of the original renderable is used.
+   * @param rot The rotation of the new renderable; if not provided, the rotation of the original renderable is used.
+   * @param scale The scale of the new renderable; if not provided, the scale of the original renderable is used.
+   * @return A reference to the new renderable.
+   *
+   * While the renderable itself is copied, it will still use the same object, shader, and texture as the original.
+   */
   static render_ref duplicate(
     const render_ref &ref, const std::string &name, const std::optional<glm::vec3> &pos = std::nullopt,
     const std::optional<glm::vec3> &rot = std::nullopt, const std::optional<glm::vec3> &scale = std::nullopt
@@ -295,20 +306,42 @@ public:
    */
   static void detail_window();
 
+  /**
+   * @brief Render the colliders for all active renderables.
+   * @param cam The camera to render the colliders with.
+   *
+   * If an active renderable does not have a collider associated with it, it is ignored.
+   *
+   * This will initialize the `collider_shader` field, if it is not already initialized. For this, it relies on the
+   * `basic_mvp` vertex shader (`/assets/shaders/basic_mvp.vs.glsl`), and the `collider` fragment shader
+   * (`/assets/shaders/collider.fs.glsl`).
+   */
   static void draw_colliders(const camera &cam);
 
+  /**
+   * @brief Checks if the mouse is hovering over any collider.
+   * @param cam The camera to generate the ray with.
+   * @return The reference to the collider the mouse is hovering over, if any.
+   *
+   * This is a very expensive function to call (O(n) in the number of objects), and should be used at most once per
+   * frame. Ray collision detection is optimized by using AABB's in the collider.
+   */
   static std::optional<render_ref> mouse_over(const camera &cam);
 
+  /**
+   * @brief Checks whether we should render the colliders.
+   * @return Whether we should render the colliders.
+   */
   static constexpr bool should_render_colliders() { return render_colliders; }
 
 private:
-  static inline std::optional<shader_ref> collider_shader{};
+  static inline std::optional<shader_ref> collider_shader{}; //!< The shader to render the colliders with, if any.
   static inline std::vector<render_object> objects{}; //!< The list of objects in the cache.
   static inline std::vector<shader> shaders{}; //!< The list of shaders in the cache.
   static inline std::vector<texture> textures{}; //!< The list of textures in the cache.
   static inline std::vector<renderable> renderables{}; //!< The list of renderables in the cache.
-  static inline std::vector<collider> colliders{};
-  static inline bool render_colliders = false;
+  static inline std::vector<collider> colliders{}; //!< The list of colliders in the cache.
+  static inline bool render_colliders = false; //!< Whether to render the colliders.
 };
 
 /**
