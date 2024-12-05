@@ -56,10 +56,14 @@ int main(int argc, const char **argv) {
     glm::vec3(-0.78f, 0.23f, -0.56f) * 3.0f
   };
   glm::vec3 rotations[5] {
-    glm::sphericalRand(1.0f), glm::sphericalRand(1.0f), glm::sphericalRand(1.0f), glm::sphericalRand(1.0f), glm::sphericalRand(1.0f)
+    glm::sphericalRand(1.0f) * 360.0f,
+    glm::sphericalRand(1.0f) * 360.0f,
+    glm::sphericalRand(1.0f) * 360.0f,
+    glm::sphericalRand(1.0f) * 360.0f,
+    glm::sphericalRand(1.0f) * 360.0f
   };
   glm::vec3 scales_[5] {
-    glm::vec3{0.99}, glm::vec3{1.07}, glm::vec3{0.88}, glm::vec3{1.12}, glm::vec3{0.95}
+    glm::vec3{0.18}, glm::vec3{0.418}, glm::vec3{0.28}, glm::vec3{0.37}, glm::vec3{0.64}
   };
 
   const render_ref additional[5] {

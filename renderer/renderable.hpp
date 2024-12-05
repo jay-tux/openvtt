@@ -11,6 +11,7 @@
 #include <optional>
 #include <utility>
 
+#include "glm_wrapper.hpp"
 #include "log_view.hpp"
 
 namespace openvtt::renderer {
@@ -91,12 +92,7 @@ struct renderable {
       model_inv_t_loc{uniforms.model_inv_t} {}
 
   [[nodiscard]] inline glm::mat4 model() const {
-    return translate(
-      glm::scale(
-        glm::yawPitchRoll(rotation.x, rotation.y, rotation.z),
-        scale),
-      position
-    );
+    return glm::mat4(1.0f) | translation(position) | rescale(scale) | roll(rotation.z) | pitch(rotation.x) | yaw(rotation.y);
   }
 
   /**
