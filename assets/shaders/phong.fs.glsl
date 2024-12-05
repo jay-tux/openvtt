@@ -10,11 +10,12 @@ struct point_light {
 layout(location =  4) uniform sampler2D tex;
 layout(location =  5) uniform sampler2D spec_map;
 layout(location =  6) uniform sampler2D highlight_map;
+layout(location =  7) uniform bool is_highlighted;
 
-layout(location =  7) uniform vec3 view_pos;
-layout(location =  8) uniform int used_point_count;
-layout(location =  9) uniform float ambient_light;
-layout(location = 10) uniform point_light points[10];
+layout(location =  8) uniform vec3 view_pos;
+layout(location =  9) uniform int used_point_count;
+layout(location = 10) uniform float ambient_light;
+layout(location = 11) uniform point_light points[10];
 
 in vec2 out_uvs;
 in vec3 out_normal;
@@ -64,6 +65,8 @@ float sobel(vec2 offsets[9], vec2 zero_pos) {
 }
 
 vec3 apply_highlight(vec3 color_in) {
+    if (!is_highlighted) return color_in;
+
     float texel_w = 1.0 / textureSize(highlight_map, 0).x; float tw = texel_w;
     float texel_h = 1.0 / textureSize(highlight_map, 0).y; float th = texel_h;
 

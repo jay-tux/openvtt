@@ -256,6 +256,11 @@ public:
     return render_ref{renderables.size() - 1};
   }
 
+  static render_ref duplicate(
+    const render_ref &ref, const std::string &name, const std::optional<glm::vec3> &pos = std::nullopt,
+    const std::optional<glm::vec3> &rot = std::nullopt, const std::optional<glm::vec3> &scale = std::nullopt
+  );
+
   /**
  * @brief Load a collider from an asset, and add it to the cache.
  * @param asset The path to the asset.

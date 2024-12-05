@@ -81,7 +81,16 @@ struct renderable {
   ) : obj{o}, sh{s}, textures{ts}, name{std::move(name)}, model_loc{uniforms.model}, view_loc{uniforms.view}, proj_loc{uniforms.projection},
       model_inv_t_loc{uniforms.model_inv_t} {}
 
-  inline glm::mat4 model() const {
+  inline renderable(
+    std::string name,
+    const object_ref &o,
+    const shader_ref &s,
+    const uniforms &uniforms,
+    const std::vector<std::pair<unsigned int, texture_ref>> &ts
+  ) : obj{o}, sh{s}, textures{ts}, name{std::move(name)}, model_loc{uniforms.model}, view_loc{uniforms.view}, proj_loc{uniforms.projection},
+      model_inv_t_loc{uniforms.model_inv_t} {}
+
+  [[nodiscard]] inline glm::mat4 model() const {
     return translate(
       glm::scale(
         glm::yawPitchRoll(rotation.x, rotation.y, rotation.z),
@@ -94,15 +103,15 @@ struct renderable {
    * @brief Draw the renderable.
    * @param cam The camera to use for drawing.
    *
-   * This is a convenience function that calls `draw(cam, [](const shader_ref &){})`.
+   * This is a convenience function that calls `draw(cam, [](...){})`.
    */
   inline void draw(const camera &cam) const {
-    draw(cam, [](const shader_ref &){});
+    draw(cam, [](const auto &, const auto &){});
   }
 
   /**
    * @brief Draw the renderable.
-   * @tparam F A callable type `(const shader_ref &) -> void`.
+   * @tparam F A callable type `(const shader_ref &, const renderable &) -> void`.
    * @param cam The camera to use for drawing.
    * @param f A function to perform additional shader setup.
    *
@@ -114,7 +123,7 @@ struct renderable {
    *
    * If the shader supports Phong shading, you can use `setup_phong_shading` to set up the shader for Phong shading.
    */
-  template <std::invocable<const shader_ref &> F>
+  template <std::invocable<const shader_ref &, const renderable &> F>
   inline void draw(const camera &cam, F &&f) const {
     if (!active) return;
 
@@ -124,7 +133,7 @@ struct renderable {
     sh->set_mat4(model_loc, m);
     cam.set_matrices(*sh, view_loc, proj_loc);
     sh->set_mat3(model_inv_t_loc, glm::mat3(transpose(inverse(m))));
-    f(sh);
+    f(sh, *this);
     int i = 0;
     for (const auto &[loc, tex] : textures) {
       tex->bind(i);
@@ -291,11 +300,11 @@ public:
  * ambient light strength, and point lights based on the provided camera and lighting settings. It also allows for
  * additional shader setup through a provided callable.
  */
-template <size_t point_light_count, std::invocable<const shader_ref &> F>
-constexpr std::invocable<const shader_ref &> auto setup_phong_shading(
+template <size_t point_light_count, std::invocable<const shader_ref &, const renderable &> F>
+constexpr std::invocable<const shader_ref &, const renderable &> auto setup_phong_shading(
   camera &cam, phong_lighting &lighting, F &&f
 ) {
-  return [&f, &cam, &lighting](const shader_ref &sr) {
+  return [&f, &cam, &lighting](const shader_ref &sr, const renderable &r) {
     static auto uniforms = phong_uniforms<point_light_count>::from_shader(sr);
 
     sr->set_vec3(uniforms.view_pos, cam.position);
@@ -312,7 +321,7 @@ constexpr std::invocable<const shader_ref &> auto setup_phong_shading(
     }
     sr->set_int(uniforms.used_point_count, used);
 
-    f(sr);
+    f(sr, r);
   };
 }
 
@@ -328,10 +337,10 @@ constexpr std::invocable<const shader_ref &> auto setup_phong_shading(
  * ambient light strength, and point lights based on the provided camera and lighting settings.
  */
 template <size_t point_light_count>
-constexpr std::invocable<const shader_ref &> auto setup_phong_shading(
+constexpr std::invocable<const shader_ref &, const renderable &> auto setup_phong_shading(
   camera &cam, phong_lighting &lighting
 ) {
-  return setup_phong_shading<point_light_count>(cam, lighting, [](const shader_ref &){});
+  return setup_phong_shading<point_light_count>(cam, lighting, [](const auto &, const auto &){});
 }
 }
 

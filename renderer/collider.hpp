@@ -28,7 +28,7 @@ private:
 class collider {
 public:
   collider(const std::vector<glm::vec3> &vertices, const std::vector<unsigned int> &indices);
-  collider(const collider &other) = delete;
+  inline collider(const collider &other) : collider(other.vertices, other.indices) {}
   constexpr collider(collider &&other) noexcept {
     std::swap(vertices, other.vertices);
     std::swap(indices, other.indices);

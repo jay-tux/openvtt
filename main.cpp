@@ -1,4 +1,5 @@
 #include <iostream>
+#include <glm/gtc/random.hpp>
 
 #include "renderer/window.hpp"
 #include "renderer/fps_counter.hpp"
@@ -47,6 +48,28 @@ int main(int argc, const char **argv) {
   suzanne->scale = {0.5, 0.5, 0.5};
   suzanne->coll = coll;
 
+  glm::vec3 positions[5] {
+    glm::vec3(-0.23f, 0.45f, -0.78f) * 3.0f,
+    glm::vec3(0.67f, -0.34f, 0.12f) * 3.0f,
+    glm::vec3(-0.56f, 0.89f, -0.45f) * 3.0f,
+    glm::vec3(0.12f, -0.67f, 0.34f) * 3.0f,
+    glm::vec3(-0.78f, 0.23f, -0.56f) * 3.0f
+  };
+  glm::vec3 rotations[5] {
+    glm::sphericalRand(1.0f), glm::sphericalRand(1.0f), glm::sphericalRand(1.0f), glm::sphericalRand(1.0f), glm::sphericalRand(1.0f)
+  };
+  glm::vec3 scales_[5] {
+    glm::vec3{0.99}, glm::vec3{1.07}, glm::vec3{0.88}, glm::vec3{1.12}, glm::vec3{0.95}
+  };
+
+  const render_ref additional[5] {
+    cache::duplicate(suzanne, "monkey #1", positions[0], rotations[0], scales_[0]),
+    cache::duplicate(suzanne, "monkey #2", positions[1], rotations[1], scales_[1]),
+    cache::duplicate(suzanne, "monkey #3", positions[2], rotations[2], scales_[2]),
+    cache::duplicate(suzanne, "monkey #4", positions[3], rotations[3], scales_[3]),
+    cache::duplicate(suzanne, "monkey #5", positions[4], rotations[4], scales_[4])
+  };
+
   // force window initialization etc
   win.frame_pre();
   win.frame_post();
@@ -66,11 +89,12 @@ int main(int argc, const char **argv) {
   phong_lighting lights(0.1f, {
     { true, { .pos = {0, 1, 0}, .diffuse = {0.9, 0.9, 0.6} } }
   });
-  const auto lighting_suzanne = setup_phong_shading<10>(cam, lights/*, [&suzanne, &highlight_fbo](const shader_ref &s) {
-    static auto h_loc = s->loc_for("highlight_map");
-    highlight_fbo.bind_rgb_to(15);
-    s->set_int(h_loc, 15);
-  }*/);
+  const auto lighting_suzanne = setup_phong_shading<10>(cam, lights, [](const shader_ref &s, const renderable &r) {
+    if (r.coll.has_value()) {
+      const unsigned int uniform = s->loc_for("is_highlighted");
+      s->set_bool(uniform, (*r.coll)->is_hovered);
+    }
+  });
 
   std::optional<collider_ref> highlighted = std::nullopt;
   const unsigned int m_highlight = highlight->loc_for("model");
@@ -98,7 +122,7 @@ int main(int argc, const char **argv) {
       });
     }
 
-    perlin_square->draw(cam, [&scales](const shader_ref &sr) {
+    perlin_square->draw(cam, [&scales](const shader_ref &sr, const renderable &) {
       sr->set_float(4, scales[0]);
       sr->set_float(5, scales[1]);
       sr->set_float(6, scales[2]);
@@ -108,6 +132,10 @@ int main(int argc, const char **argv) {
     highlight_fbo.bind_rgb_to(15);
     phong->set_int(phong->loc_for("highlight_map"), 15);
     suzanne->draw(cam, lighting_suzanne);
+
+    for (const auto &r : additional) {
+      r->draw(cam, lighting_suzanne);
+    }
 
     cache::draw_colliders(cam);
 

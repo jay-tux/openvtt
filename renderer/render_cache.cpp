@@ -34,6 +34,28 @@ void render_cache::detail_window() {
   ImGui::End();
 }
 
+render_ref render_cache::duplicate(const render_ref &ref, const std::string &name, const std::optional<glm::vec3> &pos,
+                                   const std::optional<glm::vec3> &rot, const std::optional<glm::vec3> &scale) {
+  const auto &r = *ref;
+  auto &out = renderables.emplace_back(
+    name, r.obj, r.sh,
+    uniforms{r.model_loc, r.view_loc, r.proj_loc, r.model_inv_t_loc},
+    r.textures
+  );
+
+  if (pos.has_value()) out.position = *pos;
+  if (rot.has_value()) out.rotation = *rot;
+  if (scale.has_value()) out.scale = *scale;
+
+  if (r.coll.has_value()) {
+    colliders.emplace_back(**r.coll);
+    out.coll = collider_ref{colliders.size() - 1};
+  }
+
+  return render_ref{renderables.size() - 1};
+}
+
+
 void render_cache::draw_colliders(const camera &cam) {
   static unsigned int model_loc, view_loc, proj_loc, highlighted_loc;
 
