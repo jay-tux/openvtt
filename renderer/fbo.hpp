@@ -25,7 +25,7 @@ public:
   [[nodiscard]] bool verify() const;
 
   void resize(int nw, int nh);
-  inline void resize(const std::pair<unsigned int, unsigned int> &size) { resize(size.first, size.second); }
+  inline void resize(const std::pair<int, int> &size) { resize(size.first, size.second); }
 
   template <std::invocable F>
   void with_fbo(F &&f) const {

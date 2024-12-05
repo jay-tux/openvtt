@@ -19,10 +19,12 @@ layout(location =  3) uniform mat3 model_inv_t;
 out vec2 out_uvs;
 out vec3 out_normal;
 out vec3 out_pos;
+out vec2 out_pos_ndc;
 
 void main() {
     gl_Position = projection * view * model * vec4(pos, 1.0);
     out_uvs = uvs;
     out_normal = normalize(model_inv_t * normal);
     out_pos = vec3(model * vec4(pos, 1.0));
+    out_pos_ndc = gl_Position.xy / gl_Position.w * 0.5 + 0.5;
 }

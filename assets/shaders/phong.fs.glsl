@@ -19,6 +19,7 @@ layout(location = 10) uniform point_light points[10];
 in vec2 out_uvs;
 in vec3 out_normal;
 in vec3 out_pos;
+in vec2 out_pos_ndc;
 
 out vec4 frag_color;
 
@@ -46,33 +47,50 @@ vec3 apply_lighting(vec3 color, vec3 color_spec) {
     return amb + diff * color + spec * color_spec;
 }
 
-vec3 apply_highlight(vec3 color_in) {
-    const float kernel[9] = float[9](
-         1,  1,  1,
-         1, -8,  1,
-         1,  1,  1
-    );
+float sobel(vec2 offsets[9], vec2 zero_pos) {
+    float sobel_x[9] = float[](-1, 0, 1, -2, 0, 2, -1, 0, 1);
+    float sobel_y[9] = float[](-1, -2, -1, 0, 0, 0, 1, 2, 1);
 
-    vec2 screenSize = vec2(textureSize(highlight_map, 0));
-    vec2 texelSize = 1.0 / screenSize;
-    vec2 fc = gl_FragCoord.xy;
-
-    float edge = 0.0;
-    float mean = 0.0;
-
-    for(int y = -1; y <= 1; y++) {
-        for(int x = -1; x <= 1; x++) {
-            vec2 offset = vec2(x, y) * texelSize;
-            vec3 s = texture(highlight_map, (fc + offset) / screenSize).rgb;
-
-            int kernelIndex = (y + 1) * 3 + (x + 1);
-            edge += s.r * kernel[kernelIndex];
-            mean += s.r / 9;
-        }
+    float grad_x = 0.0;
+    float grad_y = 0.0;
+    for (int i = 0; i < 9; i++) {
+        float tex_sample = texture(highlight_map, zero_pos + offsets[i]).r;
+        grad_x += tex_sample * sobel_x[i];
+        grad_y += tex_sample * sobel_y[i];
     }
 
-//    return vec3(edge, edge, edge) * 100;
-    return mix(vec3(mean, mean, mean), color_in, 0.5);
+    float grad = sqrt(grad_x * grad_x + grad_y * grad_y);
+    return grad;
+}
+
+vec3 apply_highlight(vec3 color_in) {
+    float texel_w = 1.0 / textureSize(highlight_map, 0).x; float tw = texel_w;
+    float texel_h = 1.0 / textureSize(highlight_map, 0).y; float th = texel_h;
+
+    vec2 offsets[9] = vec2[](
+        vec2(-texel_w, -texel_h),   vec2(0.0, -texel_h),    vec2(texel_w, -texel_h),
+        vec2(-texel_w,  0.0),       vec2(0.0,  0.0),        vec2(texel_w,  0.0),
+        vec2(-texel_w,  texel_h),   vec2(0.0,  texel_h),    vec2(texel_w,  texel_h)
+    );
+
+    float sobel_grad = sobel(offsets, out_pos_ndc);
+    float gof[5] = float[](-3.2307692308, -1.3846153846, 0.0, 1.3846153846, 3.2307692308);
+    float gaussian[5] = float[](0.0625, 0.25, 0.375, 0.25, 0.0625);
+    float blur_edge = 0.0;
+
+    for (int i = -2; i <= 2; i++) {
+        blur_edge += texture(highlight_map, out_pos_ndc + vec2(2 * gof[i + 2] * texel_w, 0.0)).r * gaussian[i + 2];
+    }
+
+    for (int i = -2; i <= 2; i++) {
+        blur_edge += texture(highlight_map, out_pos_ndc + vec2(0.0, 2 * gof[i + 2] * texel_h)).r * gaussian[i + 2];
+    }
+
+    blur_edge /= 2;
+    float intensity = sobel_grad * (1 - blur_edge);
+    float edge = smoothstep(0.1, 0.3, intensity);
+
+    return mix(color_in, vec3(1.0, 1.0, 0.0), edge);
 }
 
 void main() {
