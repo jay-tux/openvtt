@@ -4,6 +4,9 @@ project(openvtt)
 
 find_package(Doxygen)
 
+find_package(Java REQUIRED)
+find_package(antlr4 REQUIRED)
+
 find_package(opengl_system REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(imgui REQUIRED)
@@ -11,12 +14,53 @@ find_package(glm REQUIRED)
 find_package(whereami REQUIRED)
 find_package(assimp REQUIRED)
 find_package(stb REQUIRED)
+find_package(antlr4-runtime REQUIRED)
 
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(OPENVTT_USE_STACK_TRACE OFF CACHE BOOL "Use C++23 stack trace library")
 
 set(CMAKE_CXX_STANDARD 23)
+
+if(DEFINED openjdk_BIN_DIRS_DEBUG)
+    set(JAVA_EXE ${openjdk_BIN_DIRS_DEBUG}/java)
+elseif(DEFINED openjdk_BIN_DIRS_RELEASE)
+    set(JAVA_EXE ${openjdk_BIN_DIRS_RELEASE}/java)
+else()
+    message(FATAL_ERROR "Could not find Java executable")
+endif()
+
+if(DEFINED antlr4_BIN_DIRS_DEBUG)
+    set(ANTLR_EXE ${antlr4_BIN_DIRS_DEBUG}/antlr4)
+    set(ANTLR_LIB ${antlr4_PACKAGE_FOLDER_DEBUG}/res/antlr-complete.jar)
+elseif(DEFINED antlr4_BIN_DIRS_RELEASE)
+    set(ANTLR_EXE ${antlr4_BIN_DIRS_RELEASE}/antlr4)
+    set(ANTLR_LIB ${antlr4_PACKAGE_FOLDER_RELEASE}/res/antlr-complete.jar)
+else()
+    message(FATAL_ERROR "Could not find ANTLR executable/JAR")
+endif()
+
+message(STATUS "JAVA_EXE=${JAVA_EXE} // ANTLR_EXECUTABLE=${ANTLR_EXE}")
+
+function(antlr_target TARGET GRAMMAR PACKAGE OUT_DIR)
+    get_filename_component(${GRAMMAR}_SRC ${GRAMMAR} NAME_WLE)
+    set(${TARGET}_SOURCES
+            ${OUT_DIR}/${${GRAMMAR}_SRC}Lexer.cpp ${OUT_DIR}/${${GRAMMAR}_SRC}Parser.cpp
+            ${OUT_DIR}/${${GRAMMAR}_SRC}BaseVisitor.cpp ${OUT_DIR}/${${GRAMMAR}_SRC}Visitor.cpp
+    )
+    add_custom_command(
+            OUTPUT ${${TARGET}_SOURCES}
+            COMMAND ${JAVA_EXE} -classpath ${ANTLR_LIB} org.antlr.v4.Tool -o ${OUT_DIR} -Dlanguage=Cpp -no-listener -visitor -package ${PACKAGE} ${GRAMMAR}
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            DEPENDS ${GRAMMAR}
+    )
+
+    add_library(${TARGET} STATIC ${${TARGET}_SOURCES})
+    target_link_libraries(${TARGET} PUBLIC antlr4_static)
+    target_include_directories(${TARGET} PUBLIC ${OUT_DIR})
+endfunction()
+
+antlr_target(data_dsl ${CMAKE_SOURCE_DIR}/grammars/dsl.g4 openvtt::dsl ${CMAKE_BINARY_DIR}/antlr_out/dsl)
 
 add_executable(openvtt
         # explicit dependencies (ImGui)
@@ -51,6 +95,8 @@ target_link_libraries(openvtt PRIVATE
         whereami::whereami
         assimp::assimp
         stb::stb
+        antlr4_static
+        data_dsl
 )
 
 if (OPENVTT_USE_STACK_TRACE)
