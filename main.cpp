@@ -7,9 +7,14 @@
 #include "renderer/renderable.hpp"
 #include "renderer/fbo.hpp"
 
+#include "map/map_parser.hpp"
+
+using namespace openvtt::map;
 using namespace openvtt::renderer;
 
 int main(int argc, const char **argv) {
+  parse_map("examples/suzannes");
+
   using cache = render_cache;
   auto &win = window::get();
 
@@ -23,6 +28,7 @@ int main(int argc, const char **argv) {
 
   const auto sh = cache::load_shader("perlin", "perlin");
   const auto phong = cache::load_shader("phong", "phong");
+  const auto instanced_phong = cache::load_shader("phong_instanced", "phong");
   const auto highlight = cache::load_shader("basic_mvp", "highlight");
 
   const auto tex = cache::add_texture("plasma");
@@ -66,13 +72,19 @@ int main(int argc, const char **argv) {
     glm::vec3{0.18}, glm::vec3{0.418}, glm::vec3{0.28}, glm::vec3{0.37}, glm::vec3{0.64}
   };
 
-  const render_ref additional[5] {
-    cache::duplicate(suzanne, "monkey #1", positions[0], rotations[0], scales_[0]),
-    cache::duplicate(suzanne, "monkey #2", positions[1], rotations[1], scales_[1]),
-    cache::duplicate(suzanne, "monkey #3", positions[2], rotations[2], scales_[2]),
-    cache::duplicate(suzanne, "monkey #4", positions[3], rotations[3], scales_[3]),
-    cache::duplicate(suzanne, "monkey #5", positions[4], rotations[4], scales_[4])
+  std::vector transforms {
+    instanced_object::model_for(rotations[0], scales_[0], positions[0]),
+    instanced_object::model_for(rotations[1], scales_[1], positions[1]),
+    instanced_object::model_for(rotations[2], scales_[2], positions[2]),
+    instanced_object::model_for(rotations[3], scales_[3], positions[3]),
+    instanced_object::model_for(rotations[4], scales_[4], positions[4])
   };
+  const auto many_monkey_objects = cache::load_instanced("suzanne", transforms);
+  const instanced_render_ref many_monkeys = cache::add_instanced_renderable(
+    many_monkey_objects, instanced_phong, instanced_uniforms{0, 1}, std::initializer_list{
+      std::pair{4u, tex}, std::pair{5u, tex}
+    }
+  );
 
   // force window initialization etc
   win.frame_pre();
@@ -99,6 +111,7 @@ int main(int argc, const char **argv) {
       s->set_bool(uniform, (*r.coll)->is_hovered);
     }
   });
+  const auto dup_lighting = setup_phong_shading<10, instanced_renderable>(cam, lights);
 
   std::optional<collider_ref> highlighted = std::nullopt;
   const unsigned int m_highlight = highlight->loc_for("model");
@@ -137,9 +150,10 @@ int main(int argc, const char **argv) {
     phong->set_int(phong->loc_for("highlight_map"), 15);
     suzanne->draw(cam, lighting_suzanne);
 
-    for (const auto &r : additional) {
-      r->draw(cam, lighting_suzanne);
-    }
+    // for (const auto &r : additional) {
+    //   r->draw(cam, lighting_suzanne);
+    // }
+    many_monkeys->draw(cam, dup_lighting);
 
     cache::draw_colliders(cam);
 

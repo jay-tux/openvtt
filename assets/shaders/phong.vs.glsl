@@ -1,12 +1,5 @@
 #version 460
 
-struct point_light {
-    vec3 pos;
-    vec3 diffuse;
-    vec3 specular;
-    vec3 attenuation;
-};
-
 layout(location =  0) in vec3 pos;
 layout(location =  1) in vec2 uvs;
 layout(location =  2) in vec3 normal;

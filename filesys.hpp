@@ -39,7 +39,8 @@ enum struct asset_type {
   VERT_SHADER, //!< Vertex shader, in the /assets/shaders/ directory, using the .vs.glsl extension.
   FRAG_SHADER, //!< Fragment shader, in the /assets/shaders/ directory, using the .fs.glsl extension.
   TEXTURE_PNG, //!< PNG Texture, in the /assets/textures/ directory, using the .png extension.
-  MODEL_OBJ //!< Wavefront OBJ Model, in the /assets/models/ directory, using the .obj extension.
+  MODEL_OBJ, //!< Wavefront OBJ Model, in the /assets/models/ directory, using the .obj extension.
+  MAP, //!< Map file, in the /assets/maps/ directory, using the .ovm extension.
 };
 
 /**
@@ -59,6 +60,7 @@ inline std::string asset_path(const std::string &asset_name) {
       case asset_type::FRAG_SHADER: return "/shaders/";
       case asset_type::TEXTURE_PNG: return "/textures/";
       case asset_type::MODEL_OBJ: return "/models/";
+      case asset_type::MAP: return "/maps/";
       default: return "";
     }
   };
@@ -70,6 +72,7 @@ inline std::string asset_path(const std::string &asset_name) {
       case asset_type::FRAG_SHADER: return "fs.glsl";
       case asset_type::TEXTURE_PNG: return "png";
       case asset_type::MODEL_OBJ: return "obj";
+      case asset_type::MAP: return "ovm";
       default: return "";
     }
   };

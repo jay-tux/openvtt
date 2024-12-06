@@ -1,0 +1,12 @@
+voxels(100, 100) {
+    // TODO
+}
+
+objects {
+    suzanne = combine(
+        obj = object("suzanne"),
+        sh = shader("phong", "phong"),
+        tex = texture("plasma"),
+        col = collider("suzanne_collider")
+    );
+}

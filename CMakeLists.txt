@@ -60,7 +60,7 @@ function(antlr_target TARGET GRAMMAR PACKAGE OUT_DIR)
     target_include_directories(${TARGET} PUBLIC ${OUT_DIR})
 endfunction()
 
-antlr_target(data_dsl ${CMAKE_SOURCE_DIR}/grammars/dsl.g4 openvtt::dsl ${CMAKE_BINARY_DIR}/antlr_out/dsl)
+antlr_target(map_spec ${CMAKE_SOURCE_DIR}/grammars/map.g4 openvtt::map ${CMAKE_BINARY_DIR}/antlr_out/map)
 
 add_executable(openvtt
         # explicit dependencies (ImGui)
@@ -83,6 +83,7 @@ add_executable(openvtt
         renderer/collider.hpp
         renderer/fbo.cpp
         renderer/glad.cpp
+        map/map_parser.cpp
 )
 
 target_include_directories(openvtt PRIVATE ${CMAKE_SOURCE_DIR})
@@ -96,7 +97,7 @@ target_link_libraries(openvtt PRIVATE
         assimp::assimp
         stb::stb
         antlr4_static
-        data_dsl
+        map_spec
 )
 
 if (OPENVTT_USE_STACK_TRACE)

@@ -16,13 +16,16 @@
 
 namespace openvtt::renderer {
 class object_ref;
+class instanced_object_ref;
 class shader_ref;
 class texture_ref;
 class render_ref;
+class instanced_render_ref;
 class collider_ref;
 class render_cache;
 
 constexpr render_object &operator*(const object_ref &r);
+constexpr instanced_object &operator*(const instanced_object_ref &r);
 constexpr shader &operator*(const shader_ref &r);
 constexpr texture &operator*(const texture_ref &r);
 constexpr collider &operator*(const collider_ref &r);
@@ -44,6 +47,26 @@ public:
 private:
   constexpr explicit object_ref(const size_t idx) : idx{idx} {}
   size_t idx; //!< The index of the object in the render cache.
+  friend class render_cache;
+};
+
+/**
+ * @brief A reference to an instanced render object.
+ *
+ * These references are indexes into the render cache's instanced object list.
+ */
+class instanced_object_ref {
+public:
+  /**
+   * @brief Dereference the instanced object reference.
+   * @return (A pointer to) the instanced object the reference points to.
+   *
+   * This function allows the instanced object reference to be used as a pointer to the instanced object it references.
+   */
+  constexpr instanced_object *operator->() const { return &**this; }
+private:
+  constexpr explicit instanced_object_ref(const size_t idx) : idx{idx} {}
+  size_t idx; //!< The index of the instanced object in the render cache.
   friend class render_cache;
 };
 
@@ -112,6 +135,7 @@ private:
 
 namespace openvtt::renderer {
 constexpr renderable &operator*(const render_ref &r);
+constexpr instanced_renderable &operator*(const instanced_render_ref &r);
 
 /**
  * @brief A reference to a renderable.
@@ -134,6 +158,27 @@ private:
 };
 
 /**
+ * @brief A reference to an instanced renderable.
+ *
+ * These references are indexes into the render cache's instanced renderable list.
+ */
+class instanced_render_ref {
+public:
+  /**
+   * @brief Dereference the instanced renderable reference.
+   * @return (A pointer to) the instanced renderable the reference points to.
+   *
+   * This function allows the instanced renderable reference to be used as a pointer to the instanced renderable it
+   * references.
+   */
+  constexpr instanced_renderable *operator->() const { return &**this; }
+private:
+  constexpr explicit instanced_render_ref(const size_t idx) : idx{idx} {}
+  size_t idx; //!< The index of the instanced renderable in the render cache.
+  friend class render_cache;
+};
+
+/**
  * @brief A cache of render objects, shaders, textures, colliders, and renderables.
  *
  * Each of the types is stored contiguously in memory, and can be accessed using a reference to the cache. Pointers and
@@ -150,6 +195,12 @@ public:
    * @return The object the reference points to.
    */
   constexpr static render_object &operator[](const object_ref &r) { return objects[r.idx]; }
+  /**
+   * @brief Get an instanced render object from the cache.
+   * @param r The reference to the instanced object.
+   * @return The instanced object the reference points to.
+   */
+  constexpr static instanced_object &operator[](const instanced_object_ref &r) { return instanced_objects[r.idx]; }
   /**
    * @brief Get a shader from the cache.
    * @param r The reference to the shader.
@@ -168,6 +219,12 @@ public:
    * @return The renderable the reference points to.
    */
   constexpr static renderable &operator[](const render_ref &r) { return renderables[r.idx]; }
+  /**
+   * @brief Get an instanced renderable from the cache.
+   * @param r The reference to the instanced renderable.
+   * @return The instanced renderable the reference points to.
+   */
+  constexpr static instanced_renderable &operator[](const instanced_render_ref &r) { return instanced_renderables[r.idx]; }
   /**
    * @brief Get a collider from the cache.
    * @param r The reference to the collider.
@@ -199,6 +256,34 @@ public:
   constexpr static object_ref add_object(Ts &&... ts) {
     objects.emplace_back(std::forward<Ts>(ts)...);
     return object_ref{objects.size() - 1};
+  }
+
+  /**
+   * @brief Load an instanced object from an asset, and add it to the cache.
+   * @param asset The path to the asset.
+   * @param transforms The list of transforms for the instanced object.
+   * @return A reference to the object.
+   *
+   * The object is loaded using the @ref `instanced_object::load_from` function, and then it is instanced using the
+   * provided transforms.
+   */
+  constexpr static instanced_object_ref load_instanced(const std::string &asset, const std::vector<glm::mat4> &transforms) {
+    instanced_objects.emplace_back(instanced_object::load_from(asset, transforms));
+    return instanced_object_ref{instanced_objects.size() - 1};
+  }
+
+  /**
+   * @brief Add an instanced object to the cache.
+   * @tparam Ts The types of the arguments to the instanced object's constructor.
+   * @param ts The arguments to the instanced object's constructor.
+   * @return A reference to the instanced object.
+   *
+   * The instanced object is constructed in-place in the cache.
+   */
+  template <typename ... Ts> requires(std::constructible_from<instanced_object, Ts...>)
+  constexpr static object_ref add_instanced_object(Ts &&... ts) {
+    instanced_objects.emplace_back(std::forward<Ts>(ts)...);
+    return object_ref{instanced_objects.size() - 1};
   }
 
   /**
@@ -254,6 +339,20 @@ public:
   constexpr static render_ref add_renderable(Ts &&... ts) {
     renderables.emplace_back(std::forward<Ts>(ts)...);
     return render_ref{renderables.size() - 1};
+  }
+
+  /**
+   * @brief Add a renderable to the cache.
+   * @tparam Ts The types of the arguments to the renderable's constructor.
+   * @param ts The arguments to the renderable's constructor.
+   * @return A reference to the renderable.
+   *
+   * The renderable is constructed in-place in the cache.
+   */
+  template <typename ... Ts> requires(std::constructible_from<instanced_renderable, Ts...>)
+  constexpr static instanced_render_ref add_instanced_renderable(Ts &&... ts) {
+    instanced_renderables.emplace_back(std::forward<Ts>(ts)...);
+    return instanced_render_ref{instanced_renderables.size() - 1};
   }
 
   /**
@@ -337,9 +436,11 @@ public:
 private:
   static inline std::optional<shader_ref> collider_shader{}; //!< The shader to render the colliders with, if any.
   static inline std::vector<render_object> objects{}; //!< The list of objects in the cache.
+  static inline std::vector<instanced_object> instanced_objects{}; //!< The list of instanced objects in the cache.
   static inline std::vector<shader> shaders{}; //!< The list of shaders in the cache.
   static inline std::vector<texture> textures{}; //!< The list of textures in the cache.
   static inline std::vector<renderable> renderables{}; //!< The list of renderables in the cache.
+  static inline std::vector<instanced_renderable> instanced_renderables{}; //!< The list of instanced renderables in the cache.
   static inline std::vector<collider> colliders{}; //!< The list of colliders in the cache.
   static inline bool render_colliders = false; //!< Whether to render the colliders.
 };
@@ -357,6 +458,14 @@ constexpr static inline auto cache = render_cache{};
  * This overload allows the object reference to be treated as a pointer.
  */
 constexpr render_object &operator*(const object_ref &r) { return cache[r]; }
+/**
+ * @brief Gets the instanced object the reference points to.
+ * @param r The instanced object reference.
+ * @return The instanced object the reference points to.
+ *
+ * This overload allows the instanced object reference to be treated as a pointer.
+ */
+constexpr instanced_object &operator*(const instanced_object_ref &r) { return cache[r]; }
 /**
  * @brief Gets the shader the reference points to.
  * @param r The shader reference.
@@ -381,6 +490,14 @@ constexpr texture &operator*(const texture_ref &r) { return cache[r]; }
  * This overload allows the renderable reference to be treated as a pointer.
  */
 constexpr renderable &operator*(const render_ref &r) { return cache[r]; }
+/**
+ * @brief Gets the instanced renderable the reference points to.
+ * @param r The instanced renderable reference.
+ * @return The instanced renderable the reference points to.
+ *
+ * This overload allows the instanced renderable reference to be treated as a pointer.
+ */
+constexpr instanced_renderable &operator*(const instanced_render_ref &r) { return cache[r]; }
 /**
  * @brief Gets the collider the reference points to.
  * @param r The collider reference.

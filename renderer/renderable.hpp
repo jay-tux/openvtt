@@ -16,6 +16,7 @@
 
 namespace openvtt::renderer {
 struct renderable;
+struct instanced_renderable;
 }
 
 #include "render_cache.hpp"
@@ -158,6 +159,120 @@ struct renderable {
 };
 
 /**
+ * @brief A struct to hold the required uniform locations for a shader (3D); for instanced rendering.
+ *
+ * In instanced rendering, the model matrices (model and inverse-transpose of the model) are passed during construction
+ * and shouldn't need updating.
+ */
+struct instanced_uniforms {
+  unsigned int view; //!< The location of the view matrix uniform.
+  unsigned int projection;  //!< The location of the projection matrix uniform.
+
+  /**
+   * @brief Create a uniforms struct from a shader.
+   * @param s The shader to get the uniform locations from.
+   * @return A uniforms struct with the locations of the required uniforms.
+   *
+   * The uniforms are dynamically loaded from the shader. This forces the shader to have the following uniforms:
+   * - `model` (mat4): The model matrix.
+   * - `view` (mat4): The view matrix.
+   * - `projection` (mat4): The projection matrix.
+   * - `model_inv_t` (mat3): The inverse-transpose of the model matrix.
+   */
+  inline static instanced_uniforms from_shader(const shader_ref &s) {
+    return {
+      .view = s->loc_for("view"),
+      .projection = s->loc_for("projection")
+    };
+  }
+};
+
+/**
+ * @brief A struct to hold an instanced renderable.
+ *
+ * An instanced renderable is a set of objects (with a fixed transform), that are stored together with a reference to
+ * their (shared) shader, textures, and uniforms. This allows for efficient rendering of many objects with the same
+ * type.
+ *
+ * Use the `draw` function to draw the renderable to the screen.
+ */
+struct instanced_renderable {
+  /**
+   * @brief Construct an instanced renderable.
+   * @param o The object to render.
+   * @param s The shader to use.
+   * @param uniforms The uniforms struct for the shader.
+   * @param ts A list of pairs of texture locations and textures.
+   *
+   * Each of the pairs (loc, tex) in `ts` should be a location in the shader, along with which texture to bind to that
+   * location.
+   */
+  inline instanced_renderable(
+    const instanced_object_ref &o,
+    const shader_ref &s,
+    const instanced_uniforms &uniforms,
+    const std::initializer_list<std::pair<unsigned int, texture_ref>> ts
+  ) : obj{o}, sh{s}, textures{ts}, view_loc{uniforms.view}, proj_loc{uniforms.projection} {}
+
+  inline instanced_renderable(
+    const instanced_object_ref &o,
+    const shader_ref &s,
+    const instanced_uniforms &uniforms,
+    const std::vector<std::pair<unsigned int, texture_ref>> &ts
+  ) : obj{o}, sh{s}, textures{ts}, view_loc{uniforms.view}, proj_loc{uniforms.projection} {}
+
+  /**
+   * @brief Draw all instances of this renderable.
+   * @param cam The camera to use for drawing.
+   *
+   * This is a convenience function that calls `draw(cam, [](...){})`.
+   */
+  inline void draw(const camera &cam) const {
+    draw(cam, [](const auto &, const auto &){});
+  }
+
+  /**
+   * @brief Draw all isntances of this renderable.
+   * @tparam F A callable type `(const shader_ref &, const instanced_renderable &) -> void`.
+   * @param cam The camera to use for drawing.
+   * @param f A function to perform additional shader setup.
+   *
+   * If the shader is disabled (`active == false`), this function is a no-op.
+   *
+   * This function activates the shader, then sets all required base uniforms (model, view, projection,
+   * inverse-transpose of the model). It then calls `f` with the shader, allowing for additional setup. Finally, it
+   * performs the actual rendering of the object.
+   *
+   * If the shader supports Phong shading, you can use `setup_phong_shading` to set up the shader for Phong shading.
+   */
+  template <std::invocable<const shader_ref &, const instanced_renderable &> F>
+  inline void draw(const camera &cam, F &&f) const {
+    if (!active) return;
+
+    sh->activate();
+
+    cam.set_matrices(*sh, view_loc, proj_loc);
+    f(sh, *this);
+    int i = 0;
+    for (const auto &[loc, tex] : textures) {
+      tex->bind(i);
+      sh->set_int(loc, i);
+      ++i;
+    }
+    obj->draw_instanced(*sh);
+  }
+
+  instanced_object_ref obj; //!< The object to render.
+  shader_ref sh; //!< The shader to use.
+  std::vector<std::pair<unsigned int, texture_ref>> textures; //!< The textures to use.
+
+  bool active = true; //!< Whether the renderable is active (i.e. should be rendered).
+
+  unsigned int view_loc; //!< The location of the view matrix uniform.
+  unsigned int proj_loc; //!< The location of the projection matrix uniform.
+};
+
+/**
  * @brief A struct to represent the uniforms required for Phong shading.
  * @tparam point_light_count The number of point lights to support.
  */
@@ -296,11 +411,11 @@ public:
  * ambient light strength, and point lights based on the provided camera and lighting settings. It also allows for
  * additional shader setup through a provided callable.
  */
-template <size_t point_light_count, std::invocable<const shader_ref &, const renderable &> F>
-constexpr std::invocable<const shader_ref &, const renderable &> auto setup_phong_shading(
+template <size_t point_light_count, typename Obj = renderable, std::invocable<const shader_ref &, const Obj &> F>
+constexpr std::invocable<const shader_ref &, const Obj &> auto setup_phong_shading(
   camera &cam, phong_lighting &lighting, F &&f
 ) {
-  return [&f, &cam, &lighting](const shader_ref &sr, const renderable &r) {
+  return [&f, &cam, &lighting](const shader_ref &sr, const Obj &r) {
     static auto uniforms = phong_uniforms<point_light_count>::from_shader(sr);
 
     sr->set_vec3(uniforms.view_pos, cam.position);
@@ -332,11 +447,11 @@ constexpr std::invocable<const shader_ref &, const renderable &> auto setup_phon
  * This function template sets up the necessary uniforms for Phong shading in a shader. It configures the view position,
  * ambient light strength, and point lights based on the provided camera and lighting settings.
  */
-template <size_t point_light_count>
-constexpr std::invocable<const shader_ref &, const renderable &> auto setup_phong_shading(
+template <size_t point_light_count, typename Obj = renderable>
+constexpr std::invocable<const shader_ref &, const Obj &> auto setup_phong_shading(
   camera &cam, phong_lighting &lighting
 ) {
-  return setup_phong_shading<point_light_count>(cam, lighting, [](const auto &, const auto &){});
+  return setup_phong_shading<point_light_count, Obj>(cam, lighting, [](const auto &, const Obj &){});
 }
 }
 
