@@ -92,6 +92,17 @@ struct renderable {
   ) : obj{o}, sh{s}, textures{ts}, name{std::move(name)}, model_loc{uniforms.model}, view_loc{uniforms.view}, proj_loc{uniforms.projection},
       model_inv_t_loc{uniforms.model_inv_t} {}
 
+  /**
+   * @brief Computes the model matrix for the renderable.
+   * @return The model matrix for the renderable.
+   *
+   * The transform of the object is applied in the following order:
+   * 1. Rotate around the Y-axis (yaw).
+   * 2. Rotate around the X-axis (pitch).
+   * 3. Rotate around the Z-axis (roll).
+   * 4. Scale.
+   * 5. Translate.
+   */
   [[nodiscard]] inline glm::mat4 model() const {
     return glm::mat4(1.0f) | translation(position) | rescale(scale) | roll(rotation.z) | pitch(rotation.x) | yaw(rotation.y);
   }
