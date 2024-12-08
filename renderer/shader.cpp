@@ -64,7 +64,7 @@ shader::shader(const std::string &vs, const std::string &fs) {
   gl(glDeleteShader(f));
 }
 
-shader shader::from_assets(const std::string &vsf, const std::string &fsf) {
+shader shader::load_from(const std::string &vsf, const std::string &fsf) {
   auto vs_path = asset_path<asset_type::VERT_SHADER>(vsf);
   log<log_type::DEBUG>("shader", std::format("Loading vertex shader from '{}'", vs_path));
 

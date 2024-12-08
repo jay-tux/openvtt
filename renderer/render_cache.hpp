@@ -15,168 +15,46 @@
 #include "collider.hpp"
 
 namespace openvtt::renderer {
-class object_ref;
-class instanced_object_ref;
-class shader_ref;
-class texture_ref;
-class render_ref;
-class instanced_render_ref;
-class collider_ref;
+template <typename T>
+class t_ref {
+public:
+  constexpr T *operator->() const { return &**this; }
+
+private:
+  constexpr explicit t_ref(const size_t idx) : idx{idx} {}
+  size_t idx;
+  friend class render_cache;
+};
+
+template <typename T>
+constexpr T &operator*(const t_ref<T> &r);
+
+using object_ref = t_ref<render_object>;
+using instanced_object_ref = t_ref<instanced_object>;
+using shader_ref = t_ref<shader>;
+using texture_ref = t_ref<texture>;
+using collider_ref = t_ref<collider>;
 class render_cache;
-
-constexpr render_object &operator*(const object_ref &r);
-constexpr instanced_object &operator*(const instanced_object_ref &r);
-constexpr shader &operator*(const shader_ref &r);
-constexpr texture &operator*(const texture_ref &r);
-constexpr collider &operator*(const collider_ref &r);
-
-/**
- * @brief A reference to a render object.
- *
- * These references are indexes into the render cache's object list.
- */
-class object_ref {
-public:
-  /**
-   * @brief Dereference the object reference.
-   * @return (A pointer to) the object the reference points to.
-   *
-   * This function allows the object reference to be used as a pointer to the object it references.
-   */
-  constexpr render_object *operator->() const { return &**this; }
-private:
-  constexpr explicit object_ref(const size_t idx) : idx{idx} {}
-  size_t idx; //!< The index of the object in the render cache.
-  friend class render_cache;
-};
-
-/**
- * @brief A reference to an instanced render object.
- *
- * These references are indexes into the render cache's instanced object list.
- */
-class instanced_object_ref {
-public:
-  /**
-   * @brief Dereference the instanced object reference.
-   * @return (A pointer to) the instanced object the reference points to.
-   *
-   * This function allows the instanced object reference to be used as a pointer to the instanced object it references.
-   */
-  constexpr instanced_object *operator->() const { return &**this; }
-private:
-  constexpr explicit instanced_object_ref(const size_t idx) : idx{idx} {}
-  size_t idx; //!< The index of the instanced object in the render cache.
-  friend class render_cache;
-};
-
-/**
- * @brief A reference to a shader.
- *
- * These references are indexes into the render cache's shader list.
- */
-class shader_ref {
-public:
-  /**
-   * @brief Dereference the shader reference.
-   * @return (A pointer to) the shader the reference points to.
-   *
-   * This function allows the shader reference to be used as a pointer to the shader it references.
-   */
-  constexpr shader *operator->() const { return &**this; }
-private:
-  constexpr explicit shader_ref(const size_t idx) : idx{idx} {}
-  size_t idx; //!< The index of the shader in the render cache.
-  friend class render_cache;
-};
-
-/**
- * @brief A reference to a texture.
- *
- * These references are indexes into the render cache's texture list.
- */
-class texture_ref {
-public:
-  /**
-   * @brief Dereference the texture reference.
-   * @return (A pointer to) the texture the reference points to.
-   *
-   * This function allows the texture reference to be used as a pointer to the texture it references.
-   */
-  constexpr texture *operator->() const { return &**this; }
-private:
-  constexpr explicit texture_ref(const size_t idx) : idx{idx} {}
-  size_t idx; //!< The index of the texture in the render cache.
-  friend class render_cache;
-};
-
-/**
- * @brief A reference to a collider.
- *
- * These references are indexes into the render cache's collider list.
- */
-class collider_ref {
-public:
-  /**
-   * @brief Dereference the collider reference.
-   * @return (A pointer to) the collider the reference points to.
-   *
-   * This function allows the collider reference to be used as a pointer to the collider it references.
-   */
-  constexpr collider *operator->() const { return &**this; }
-private:
-  constexpr explicit collider_ref(const size_t idx) : idx{idx} {}
-  size_t idx; //!< The index of the collider in the render cache.
-  friend class render_cache;
-};
 }
 
 #include "renderable.hpp"
 
 namespace openvtt::renderer {
-constexpr renderable &operator*(const render_ref &r);
-constexpr instanced_renderable &operator*(const instanced_render_ref &r);
+using render_ref = t_ref<renderable>;
+using instanced_render_ref = t_ref<instanced_renderable>;
 
-/**
- * @brief A reference to a renderable.
- *
- * These references are indexes into the render cache's renderable list.
- */
-class render_ref {
-public:
-  /**
-   * @brief Dereference the renderable reference.
-   * @return (A pointer to) the renderable the reference points to.
-   *
-   * This function allows the renderable reference to be used as a pointer to the renderable it references.
-   */
-  constexpr renderable *operator->() const { return &**this; }
-private:
-  constexpr explicit render_ref(const size_t idx) : idx{idx} {}
-  size_t idx; //!< The index of the renderable in the render cache.
-  friend class render_cache;
-};
+namespace type_traits {
+template <typename T1, typename T2>
+concept cvr_same = std::same_as<std::remove_cvref_t<T1>, std::remove_cvref_t<T2>>;
+template <typename T>
+concept invalid = false;
 
-/**
- * @brief A reference to an instanced renderable.
- *
- * These references are indexes into the render cache's instanced renderable list.
- */
-class instanced_render_ref {
-public:
-  /**
-   * @brief Dereference the instanced renderable reference.
-   * @return (A pointer to) the instanced renderable the reference points to.
-   *
-   * This function allows the instanced renderable reference to be used as a pointer to the instanced renderable it
-   * references.
-   */
-  constexpr instanced_renderable *operator->() const { return &**this; }
-private:
-  constexpr explicit instanced_render_ref(const size_t idx) : idx{idx} {}
-  size_t idx; //!< The index of the instanced renderable in the render cache.
-  friend class render_cache;
+template <typename T, typename ... Args>
+concept loadable = requires(Args &&... args)
+{
+  { T::load_from(std::forward<Args>(args)...) } -> std::same_as<T>;
 };
+}
 
 /**
  * @brief A cache of render objects, shaders, textures, colliders, and renderables.
@@ -189,170 +67,21 @@ class render_cache {
 public:
   constexpr render_cache() = default;
 
-  /**
-   * @brief Get a render object from the cache.
-   * @param r The reference to the object.
-   * @return The object the reference points to.
-   */
-  constexpr static render_object &operator[](const object_ref &r) { return objects[r.idx]; }
-  /**
-   * @brief Get an instanced render object from the cache.
-   * @param r The reference to the instanced object.
-   * @return The instanced object the reference points to.
-   */
-  constexpr static instanced_object &operator[](const instanced_object_ref &r) { return instanced_objects[r.idx]; }
-  /**
-   * @brief Get a shader from the cache.
-   * @param r The reference to the shader.
-   * @return The shader the reference points to.
-   */
-  constexpr static shader &operator[](const shader_ref &r) { return shaders[r.idx]; }
-  /**
-   * @brief Get a texture from the cache.
-   * @param r The reference to the texture.
-   * @return The texture the reference points to.
-   */
-  constexpr static texture &operator[](const texture_ref &r) { return textures[r.idx]; }
-  /**
-   * @brief Get a renderable from the cache.
-   * @param r The reference to the renderable.
-   * @return The renderable the reference points to.
-   */
-  constexpr static renderable &operator[](const render_ref &r) { return renderables[r.idx]; }
-  /**
-   * @brief Get an instanced renderable from the cache.
-   * @param r The reference to the instanced renderable.
-   * @return The instanced renderable the reference points to.
-   */
-  constexpr static instanced_renderable &operator[](const instanced_render_ref &r) { return instanced_renderables[r.idx]; }
-  /**
-   * @brief Get a collider from the cache.
-   * @param r The reference to the collider.
-   * @return The collider the reference points to.
-   */
-  constexpr static collider &operator[](const collider_ref &r) { return colliders[r.idx]; }
-
-  /**
-   * @brief Load an object from an asset, and add it to the cache.
-   * @param asset The path to the asset.
-   * @return A reference to the object.
-   *
-   * The object is loaded using the @ref `render_object::load_from` function, and then added to the cache.
-   */
-  constexpr static object_ref load_object(const std::string &asset) {
-    objects.emplace_back(render_object::load_from(asset));
-    return object_ref{objects.size() - 1};
+  template <typename T>
+  constexpr static T &operator[](const t_ref<T> &ref) {
+    return cache_for<T>()[ref.idx];
   }
 
-  /**
-   * @brief Add an object to the cache.
-   * @tparam Ts The types of the arguments to the object's constructor.
-   * @param ts The arguments to the object's constructor.
-   * @return A reference to the object.
-   *
-   * The object is constructed in-place in the cache.
-   */
-  template <typename ... Ts> requires(std::constructible_from<render_object, Ts...>)
-  constexpr static object_ref add_object(Ts &&... ts) {
-    objects.emplace_back(std::forward<Ts>(ts)...);
-    return object_ref{objects.size() - 1};
+  template <typename T, typename ... Args> requires(std::constructible_from<T, Args...>)
+  constexpr static t_ref<T> construct(Args &&... args) {
+    cache_for<T>().emplace_back(std::forward<Args>(args)...);
+    return last_for<T>();
   }
 
-  /**
-   * @brief Load an instanced object from an asset, and add it to the cache.
-   * @param asset The path to the asset.
-   * @param transforms The list of transforms for the instanced object.
-   * @return A reference to the object.
-   *
-   * The object is loaded using the @ref `instanced_object::load_from` function, and then it is instanced using the
-   * provided transforms.
-   */
-  constexpr static instanced_object_ref load_instanced(const std::string &asset, const std::vector<glm::mat4> &transforms) {
-    instanced_objects.emplace_back(instanced_object::load_from(asset, transforms));
-    return instanced_object_ref{instanced_objects.size() - 1};
-  }
-
-  /**
-   * @brief Add an instanced object to the cache.
-   * @tparam Ts The types of the arguments to the instanced object's constructor.
-   * @param ts The arguments to the instanced object's constructor.
-   * @return A reference to the instanced object.
-   *
-   * The instanced object is constructed in-place in the cache.
-   */
-  template <typename ... Ts> requires(std::constructible_from<instanced_object, Ts...>)
-  constexpr static object_ref add_instanced_object(Ts &&... ts) {
-    instanced_objects.emplace_back(std::forward<Ts>(ts)...);
-    return object_ref{instanced_objects.size() - 1};
-  }
-
-  /**
-   * @brief Load a shader from assets, and add it to the cache.
-   * @param vs The path to the vertex shader asset.
-   * @param fs The path to the fragment shader asset.
-   * @return A reference to the shader.
-   *
-   * The shader is loaded using the @ref `shader::from_assets` function, and then added to the cache.
-   */
-  constexpr static shader_ref load_shader(const std::string &vs, const std::string &fs) {
-    shaders.emplace_back(shader::from_assets(vs, fs));
-    return shader_ref{shaders.size() - 1};
-  }
-
-  /**
-   * @brief Add a shader to the cache.
-   * @tparam Ts The types of the arguments to the shader's constructor.
-   * @param ts The arguments to the shader's constructor.
-   * @return A reference to the shader.
-   *
-   * The shader is constructed in-place in the cache.
-   */
-  template <typename ... Ts> requires(std::constructible_from<shader, Ts...>)
-  constexpr static shader_ref add_shader(Ts &&... ts) {
-    shaders.emplace_back(std::forward<Ts>(ts)...);
-    return shader_ref{shaders.size() - 1};
-  }
-
-  /**
-   * @brief Add a texture to the cache.
-   * @tparam Ts The types of the arguments to the texture's constructor.
-   * @param ts The arguments to the texture's constructor.
-   * @return A reference to the texture.
-   *
-   * The texture is constructed in-place in the cache.
-   */
-  template <typename ... Ts> requires(std::constructible_from<texture, Ts...>)
-  constexpr static texture_ref add_texture(Ts &&... ts) {
-    textures.emplace_back(std::forward<Ts>(ts)...);
-    return texture_ref{textures.size() - 1};
-  }
-
-  /**
-   * @brief Add a renderable to the cache.
-   * @tparam Ts The types of the arguments to the renderable's constructor.
-   * @param ts The arguments to the renderable's constructor.
-   * @return A reference to the renderable.
-   *
-   * The renderable is constructed in-place in the cache.
-   */
-  template <typename ... Ts> requires(std::constructible_from<renderable, Ts...>)
-  constexpr static render_ref add_renderable(Ts &&... ts) {
-    renderables.emplace_back(std::forward<Ts>(ts)...);
-    return render_ref{renderables.size() - 1};
-  }
-
-  /**
-   * @brief Add a renderable to the cache.
-   * @tparam Ts The types of the arguments to the renderable's constructor.
-   * @param ts The arguments to the renderable's constructor.
-   * @return A reference to the renderable.
-   *
-   * The renderable is constructed in-place in the cache.
-   */
-  template <typename ... Ts> requires(std::constructible_from<instanced_renderable, Ts...>)
-  constexpr static instanced_render_ref add_instanced_renderable(Ts &&... ts) {
-    instanced_renderables.emplace_back(std::forward<Ts>(ts)...);
-    return instanced_render_ref{instanced_renderables.size() - 1};
+  template <typename T, typename ... Args> requires(type_traits::loadable<T, Args...>)
+  constexpr static t_ref<T> load(Args &&... args) {
+    cache_for<T>().emplace_back(T::load_from(std::forward<Args>(args)...));
+    return last_for<T>();
   }
 
   /**
@@ -370,32 +99,6 @@ public:
     const render_ref &ref, const std::string &name, const std::optional<glm::vec3> &pos = std::nullopt,
     const std::optional<glm::vec3> &rot = std::nullopt, const std::optional<glm::vec3> &scale = std::nullopt
   );
-
-  /**
- * @brief Load a collider from an asset, and add it to the cache.
- * @param asset The path to the asset.
- * @return A reference to the collider.
- *
- * The object is loaded using the @ref `render_object::load_from` function, and then added to the cache.
- */
-  constexpr static collider_ref load_collider(const std::string &asset) {
-    colliders.emplace_back(collider::load_from(asset));
-    return collider_ref{colliders.size() - 1};
-  }
-
-  /**
-   * @brief Add a collider to the cache.
-   * @tparam Ts The types of the arguments to the collider's constructor.
-   * @param ts The arguments to the collider's constructor.
-   * @return A reference to the collider.
-   *
-   * The collider is constructed in-place in the cache.
-   */
-  template <typename ... Ts> requires(std::constructible_from<collider, Ts...>)
-  constexpr static collider_ref add_collider(Ts &&... ts) {
-    colliders.emplace_back(std::forward<Ts>(ts)...);
-    return collider_ref{colliders.size() - 1};
-  }
 
   /**
    * @brief Render an overview of the cache contents.
@@ -434,6 +137,26 @@ public:
   static constexpr bool should_render_colliders() { return render_colliders; }
 
 private:
+  template <typename T>
+  static constexpr std::vector<T> &cache_for() {
+    if constexpr(type_traits::cvr_same<T, render_object>) return objects;
+    else if constexpr(type_traits::cvr_same<T, instanced_object>) return instanced_objects;
+    else if constexpr(type_traits::cvr_same<T, shader>) return shaders;
+    else if constexpr(type_traits::cvr_same<T, texture>) return textures;
+    else if constexpr(type_traits::cvr_same<T, renderable>) return renderables;
+    else if constexpr(type_traits::cvr_same<T, instanced_renderable>) return instanced_renderables;
+    else if constexpr(type_traits::cvr_same<T, collider>) return colliders;
+    else {
+      static_assert(type_traits::invalid<T>, "Type not supported in cache.");
+      std::unreachable();
+    }
+  }
+
+  template <typename T>
+  static constexpr t_ref<T> last_for() {
+    return t_ref<T>{cache_for<T>().size() - 1};
+  }
+
   static inline std::optional<shader_ref> collider_shader{}; //!< The shader to render the colliders with, if any.
   static inline std::vector<render_object> objects{}; //!< The list of objects in the cache.
   static inline std::vector<instanced_object> instanced_objects{}; //!< The list of instanced objects in the cache.
@@ -450,62 +173,8 @@ private:
  */
 constexpr static inline auto cache = render_cache{};
 
-/**
- * @brief Gets the object the reference points to.
- * @param r The object reference.
- * @return The object the reference points to.
- *
- * This overload allows the object reference to be treated as a pointer.
- */
-constexpr render_object &operator*(const object_ref &r) { return cache[r]; }
-/**
- * @brief Gets the instanced object the reference points to.
- * @param r The instanced object reference.
- * @return The instanced object the reference points to.
- *
- * This overload allows the instanced object reference to be treated as a pointer.
- */
-constexpr instanced_object &operator*(const instanced_object_ref &r) { return cache[r]; }
-/**
- * @brief Gets the shader the reference points to.
- * @param r The shader reference.
- * @return The shader the reference points to.
- *
- * This overload allows the shader reference to be treated as a pointer.
- */
-constexpr shader &operator*(const shader_ref &r) { return cache[r]; }
-/**
- * @brief Gets the texture the reference points to.
- * @param r The texture reference.
- * @return The texture the reference points to.
- *
- * This overload allows the texture reference to be treated as a pointer.
- */
-constexpr texture &operator*(const texture_ref &r) { return cache[r]; }
-/**
- * @brief Gets the renderable the reference points to.
- * @param r The renderable reference.
- * @return The renderable the reference points to.
- *
- * This overload allows the renderable reference to be treated as a pointer.
- */
-constexpr renderable &operator*(const render_ref &r) { return cache[r]; }
-/**
- * @brief Gets the instanced renderable the reference points to.
- * @param r The instanced renderable reference.
- * @return The instanced renderable the reference points to.
- *
- * This overload allows the instanced renderable reference to be treated as a pointer.
- */
-constexpr instanced_renderable &operator*(const instanced_render_ref &r) { return cache[r]; }
-/**
- * @brief Gets the collider the reference points to.
- * @param r The collider reference.
- * @return The collider the reference points to.
- *
- * This overload allows the collider reference to be treated as a pointer.
- */
-constexpr collider &operator*(const collider_ref &r) { return cache[r]; }
+template <typename T>
+constexpr T &operator*(const t_ref<T> &r) { return cache[r]; }
 }
 
 #endif //RENDER_CACHE_HPP

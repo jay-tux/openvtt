@@ -62,7 +62,7 @@ void render_cache::draw_colliders(const camera &cam) {
   if (!render_colliders) return;
 
   if (!collider_shader.has_value()) {
-    collider_shader = load_shader("basic_mvp", "collider");
+    collider_shader = load<shader>("basic_mvp", "collider");
     model_loc = (*collider_shader)->loc_for("model");
     view_loc = (*collider_shader)->loc_for("view");
     proj_loc = (*collider_shader)->loc_for("projection");

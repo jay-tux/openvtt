@@ -36,7 +36,7 @@ public:
    *
    * The shader files are resolved using @ref asset_path.
    */
-  static shader from_assets(const std::string &vsf, const std::string &fsf);
+  static shader load_from(const std::string &vsf, const std::string &fsf);
 
   /**
    * @brief Returns the location of the uniform with the given name.

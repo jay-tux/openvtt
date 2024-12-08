@@ -214,6 +214,7 @@ struct instanced_renderable {
    * @param s The shader to use.
    * @param uniforms The uniforms struct for the shader.
    * @param ts A list of pairs of texture locations and textures.
+   * @param coll The collider for one instance of the object.
    *
    * Each of the pairs (loc, tex) in `ts` should be a location in the shader, along with which texture to bind to that
    * location.
@@ -222,15 +223,28 @@ struct instanced_renderable {
     const instanced_object_ref &o,
     const shader_ref &s,
     const instanced_uniforms &uniforms,
-    const std::initializer_list<std::pair<unsigned int, texture_ref>> ts
-  ) : obj{o}, sh{s}, textures{ts}, view_loc{uniforms.view}, proj_loc{uniforms.projection} {}
+    const std::initializer_list<std::pair<unsigned int, texture_ref>> ts,
+    const std::optional<collider_ref> &coll = std::nullopt
+  ) : obj{o}, sh{s}, coll{coll}, textures{ts}, view_loc{uniforms.view}, proj_loc{uniforms.projection} {}
 
+  /**
+   * @brief Construct an instanced renderable.
+   * @param o The object to render.
+   * @param s The shader to use.
+   * @param uniforms The uniforms struct for the shader.
+   * @param ts A list of pairs of texture locations and textures.
+   * @param coll The collider for one instance of the object.
+   *
+   * Each of the pairs (loc, tex) in `ts` should be a location in the shader, along with which texture to bind to that
+   * location.
+   */
   inline instanced_renderable(
     const instanced_object_ref &o,
     const shader_ref &s,
     const instanced_uniforms &uniforms,
-    const std::vector<std::pair<unsigned int, texture_ref>> &ts
-  ) : obj{o}, sh{s}, textures{ts}, view_loc{uniforms.view}, proj_loc{uniforms.projection} {}
+    const std::vector<std::pair<unsigned int, texture_ref>> &ts,
+    const std::optional<collider_ref> &coll = std::nullopt
+  ) : obj{o}, sh{s}, coll{coll}, textures{ts}, view_loc{uniforms.view}, proj_loc{uniforms.projection} {}
 
   /**
    * @brief Draw all instances of this renderable.
@@ -275,6 +289,7 @@ struct instanced_renderable {
 
   instanced_object_ref obj; //!< The object to render.
   shader_ref sh; //!< The shader to use.
+  std::optional<collider_ref> coll = std::nullopt; //!< The collider for one instance of the object.
   std::vector<std::pair<unsigned int, texture_ref>> textures; //!< The textures to use.
 
   bool active = true; //!< Whether the renderable is active (i.e. should be rendered).

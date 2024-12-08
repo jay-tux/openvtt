@@ -18,34 +18,34 @@ int main(int argc, const char **argv) {
   using cache = render_cache;
   auto &win = window::get();
 
-  const auto obj = cache::add_object(std::vector<vertex_spec>{
+  const auto obj = cache::construct<render_object>(std::vector<vertex_spec>{
     { .position = {-1, 0, -1}, .uvs = {0, 0}, .normal = {0, 1, 0} },
     { .position = {1, 0, -1}, .uvs = {1, 0}, .normal = {0, 1, 0} },
     { .position = {1, 0, 1}, .uvs = {1, 1}, .normal = {0, 1, 0} },
     { .position = {-1, 0, 1}, .uvs = {0, 1}, .normal = {0, 1, 0} },
   }, std::vector<unsigned int>{ 0, 1, 2, 0, 2, 3 });
-  const auto monkey = cache::load_object("suzanne");
+  const auto monkey = cache::load<render_object>("suzanne");
 
-  const auto sh = cache::load_shader("perlin", "perlin");
-  const auto phong = cache::load_shader("phong", "phong");
-  const auto instanced_phong = cache::load_shader("phong_instanced", "phong");
-  const auto highlight = cache::load_shader("basic_mvp", "highlight");
+  const auto sh = cache::load<shader>("perlin", "perlin");
+  const auto phong = cache::load<shader>("phong", "phong");
+  const auto instanced_phong = cache::load<shader>("phong_instanced", "phong");
+  const auto highlight = cache::load<shader>("basic_mvp", "highlight");
 
-  const auto tex = cache::add_texture("plasma");
+  const auto tex = cache::construct<texture>("plasma");
 
-  const auto coll = cache::load_collider("suzanne_collider");
+  const auto coll = cache::load<collider>("suzanne_collider");
 
   auto cam = camera{};
 
   float scales[3] = {5.0f, 5.0f, 5.0f};
 
-  const render_ref perlin_square = cache::add_renderable("perlin",
+  const render_ref perlin_square = cache::construct<renderable>("perlin",
     obj, sh, uniforms{0, 1, 2, 3}, std::initializer_list{
       std::pair{8u, tex}
     }
   );
 
-  const render_ref suzanne = cache::add_renderable("suzanne",
+  const render_ref suzanne = cache::construct<renderable>("suzanne",
     monkey, phong, uniforms{0, 1, 2, 3}, std::initializer_list{
       std::pair{4u, tex}, std::pair{5u, tex}
     }
@@ -79,8 +79,8 @@ int main(int argc, const char **argv) {
     instanced_object::model_for(rotations[3], scales_[3], positions[3]),
     instanced_object::model_for(rotations[4], scales_[4], positions[4])
   };
-  const auto many_monkey_objects = cache::load_instanced("suzanne", transforms);
-  const instanced_render_ref many_monkeys = cache::add_instanced_renderable(
+  const auto many_monkey_objects = cache::load<instanced_object>("suzanne", transforms);
+  const instanced_render_ref many_monkeys = cache::construct<instanced_renderable>(
     many_monkey_objects, instanced_phong, instanced_uniforms{0, 1}, std::initializer_list{
       std::pair{4u, tex}, std::pair{5u, tex}
     }
