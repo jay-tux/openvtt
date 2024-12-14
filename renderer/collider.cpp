@@ -171,8 +171,54 @@ float collider::ray_intersect(const ray &r, const glm::mat4 &model) const {
   return hit_min; // if no hit, still returns INFINITY, otherwise parametric distance along ray
 }
 
+void collider::bind_vao() const {
+  gl(glBindVertexArray(vao));
+}
+
 collider::~collider() {
   gl(glDeleteVertexArrays(1, &vao));
   gl(glDeleteBuffers(1, &vbo));
   gl(glDeleteBuffers(1, &ebo));
+}
+
+instanced_collider::instanced_collider(collider &&coll, const std::vector<glm::mat4> &models)
+  : collider(std::move(coll)), models{models} {
+  bind_vao();
+  gl(glGenBuffers(1, &model_vbo));
+  gl(glBindBuffer(GL_ARRAY_BUFFER, model_vbo));
+  int buf = 0;
+  gl(glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &buf));
+  gl(glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &buf));
+  gl(glBufferData(GL_ARRAY_BUFFER, models.size() * sizeof(glm::mat4), models.data(), GL_STATIC_DRAW));
+  for (unsigned int i = 0; i < 4; i++) {
+    // gl(glVertexAttribPointer(i + 1, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), reinterpret_cast<void *>(4 * sizeof(float))));
+
+    gl(glVertexAttribPointer(1 + i, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), reinterpret_cast<void *>(sizeof(glm::vec4) * i)));
+    gl(glEnableVertexAttribArray(1 + i));
+    gl(glVertexAttribDivisor(1 + i, 1));
+  }
+}
+
+void instanced_collider::draw_all() const {
+  bind_vao();
+  gl(glPolygonMode(GL_FRONT_AND_BACK, GL_LINE));
+  gl(glDrawElementsInstanced(GL_TRIANGLES, num_triangles(), GL_UNSIGNED_INT, nullptr, models.size()));
+  gl(glBindVertexArray(0));
+  gl(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+}
+
+std::pair<float, size_t> instanced_collider::ray_intersect_any(const ray &r) const {
+  float min_dist = INFINITY;
+  size_t min_idx = -1;
+  for (size_t i = 0; i < models.size(); i++) {
+    if (const float dist = ray_intersect(r, models[i]); dist < min_dist) {
+      min_dist = dist;
+      min_idx = i;
+    }
+  }
+  return {min_dist, min_idx};
+}
+
+instanced_collider::~instanced_collider() {
+  gl(glDeleteBuffers(1, &model_vbo));
 }

@@ -11,16 +11,18 @@ layout(location =  4) uniform sampler2D tex;
 layout(location =  5) uniform sampler2D spec_map;
 layout(location =  6) uniform sampler2D highlight_map;
 layout(location =  7) uniform bool is_highlighted;
+layout(location =  8) uniform uint highlighted_instance;
 
-layout(location =  8) uniform vec3 view_pos;
-layout(location =  9) uniform int used_point_count;
-layout(location = 10) uniform float ambient_light;
-layout(location = 11) uniform point_light points[10];
+layout(location =  9) uniform vec3 view_pos;
+layout(location = 10) uniform int used_point_count;
+layout(location = 11) uniform float ambient_light;
+layout(location = 12) uniform point_light points[10];
 
 in vec2 out_uvs;
 in vec3 out_normal;
 in vec3 out_pos;
 in vec2 out_pos_ndc;
+in flat int instance_id;
 
 out vec4 frag_color;
 
@@ -65,7 +67,7 @@ float sobel(vec2 offsets[9], vec2 zero_pos) {
 }
 
 vec3 apply_highlight(vec3 color_in) {
-    float edge_mul = is_highlighted ? 1.0 : 0.1;
+    float edge_mul = is_highlighted && highlighted_instance == instance_id ? 1.0 : 0.1;
 
     float texel_w = 1.0 / textureSize(highlight_map, 0).x; float tw = texel_w;
     float texel_h = 1.0 / textureSize(highlight_map, 0).y; float th = texel_h;

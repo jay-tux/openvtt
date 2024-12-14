@@ -161,7 +161,7 @@ struct renderable {
   glm::vec3 rotation{0, 0, 0}; //!< The rotation of the renderable.
   glm::vec3 scale{1,1,1}; //!< The scale of the renderable.
 
-  std::optional<collider_ref> coll = std::nullopt;
+  std::optional<collider_ref> coll = std::nullopt; //!< The collider for the renderable, if any.
 
   unsigned int model_loc; //!< The location of the model matrix uniform.
   unsigned int view_loc; //!< The location of the view matrix uniform.
@@ -210,6 +210,7 @@ struct instanced_uniforms {
 struct instanced_renderable {
   /**
    * @brief Construct an instanced renderable.
+   * @param name The shared name of all instances.
    * @param o The object to render.
    * @param s The shader to use.
    * @param uniforms The uniforms struct for the shader.
@@ -220,15 +221,24 @@ struct instanced_renderable {
    * location.
    */
   inline instanced_renderable(
+    const std::string &name,
     const instanced_object_ref &o,
     const shader_ref &s,
     const instanced_uniforms &uniforms,
     const std::initializer_list<std::pair<unsigned int, texture_ref>> ts,
-    const std::optional<collider_ref> &coll = std::nullopt
-  ) : obj{o}, sh{s}, coll{coll}, textures{ts}, view_loc{uniforms.view}, proj_loc{uniforms.projection} {}
+    const std::optional<instanced_collider_ref> &coll = std::nullopt
+  ) : name{name}, obj{o}, sh{s}, coll{coll}, textures{ts}, view_loc{uniforms.view}, proj_loc{uniforms.projection} {
+    if (coll.has_value() && (o->instance_count() != (*coll)->instance_count())) {
+      log<log_type::WARNING>("instanced_renderable", std::format(
+        "Renderable {}: mismatch in instance count: {} objects vs {} colliders.",
+        name, o->instance_count(), (*coll)->instance_count()
+      ));
+    }
+  }
 
   /**
    * @brief Construct an instanced renderable.
+   * @param name The shared name of all instances.
    * @param o The object to render.
    * @param s The shader to use.
    * @param uniforms The uniforms struct for the shader.
@@ -239,12 +249,20 @@ struct instanced_renderable {
    * location.
    */
   inline instanced_renderable(
+    const std::string &name,
     const instanced_object_ref &o,
     const shader_ref &s,
     const instanced_uniforms &uniforms,
     const std::vector<std::pair<unsigned int, texture_ref>> &ts,
-    const std::optional<collider_ref> &coll = std::nullopt
-  ) : obj{o}, sh{s}, coll{coll}, textures{ts}, view_loc{uniforms.view}, proj_loc{uniforms.projection} {}
+    const std::optional<instanced_collider_ref> &coll = std::nullopt
+  ) : name{name}, obj{o}, sh{s}, coll{coll}, textures{ts}, view_loc{uniforms.view}, proj_loc{uniforms.projection} {
+    if (coll.has_value() && (o->instance_count() != (*coll)->instance_count())) {
+      log<log_type::WARNING>("instanced_renderable", std::format(
+        "Renderable {}: mismatch in instance count: {} objects vs {} colliders.",
+        name, o->instance_count(), (*coll)->instance_count()
+      ));
+    }
+  }
 
   /**
    * @brief Draw all instances of this renderable.
@@ -287,9 +305,10 @@ struct instanced_renderable {
     obj->draw_instanced(*sh);
   }
 
+  std::string name; //!< "Group" name for all instances.
   instanced_object_ref obj; //!< The object to render.
   shader_ref sh; //!< The shader to use.
-  std::optional<collider_ref> coll = std::nullopt; //!< The collider for one instance of the object.
+  std::optional<instanced_collider_ref> coll = std::nullopt; //!< The collider for one instance of the object.
   std::vector<std::pair<unsigned int, texture_ref>> textures; //!< The textures to use.
 
   bool active = true; //!< Whether the renderable is active (i.e. should be rendered).

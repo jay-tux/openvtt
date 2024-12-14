@@ -34,6 +34,7 @@ using instanced_object_ref = t_ref<instanced_object>;
 using shader_ref = t_ref<shader>;
 using texture_ref = t_ref<texture>;
 using collider_ref = t_ref<collider>;
+using instanced_collider_ref = t_ref<instanced_collider>;
 class render_cache;
 }
 
@@ -121,6 +122,22 @@ public:
   static void draw_colliders(const camera &cam);
 
   /**
+   * @brief Placeholder type indicating no collision.
+   */
+  struct no_collision{};
+
+  /**
+   * @brief The result of a collision check.
+   *
+   * This is one of:
+   * - `no_collision`: No collision occurred.
+   * - `render_ref`: A collision occurred with a renderable.
+   * - `std::pair<instanced_render_ref, size_t>`: A collision occurred with an instanced renderable, and the index of the
+   * instance is returned as well.
+   */
+  using collision_res = std::variant<no_collision, render_ref, std::pair<instanced_render_ref, size_t>>;
+
+  /**
    * @brief Checks if the mouse is hovering over any collider.
    * @param cam The camera to generate the ray with.
    * @return The reference to the collider the mouse is hovering over, if any.
@@ -128,7 +145,32 @@ public:
    * This is a very expensive function to call (O(n) in the number of objects), and should be used at most once per
    * frame. Ray collision detection is optimized by using AABB's in the collider.
    */
-  static std::optional<render_ref> mouse_over(const camera &cam);
+  static collision_res mouse_over(const camera &cam);
+
+  /**
+   * @brief Executes a function depending on what kind of object the mouse is hovering over.
+   * @tparam F1 The function to execute if the mouse is hovering over a (single) renderable (signature `(render_ref) -> void`).
+   * @tparam F2 The function to execute if the mouse is hovering over an instanced renderable (signature `(instanced_render_ref, size_t) -> void`).
+   * @param cam The camera to generate the ray with.
+   * @param on_single The function to execute if the mouse is hovering over a single renderable.
+   * @param on_instanced The function to execute if the mouse is hovering over an instanced renderable.
+   *
+  * * This is a very expensive function to call (O(n) in the number of objects), and should be used at most once per
+   * frame. Ray collision detection is optimized by using AABB's in the collider.
+   *
+   * The `on_instanced` function is passed both a reference to the instanced renderable and the index of the specific
+   * instance the mouse is hovering over.
+   */
+  template <std::invocable<render_ref> F1, std::invocable<instanced_render_ref, size_t> F2>
+  static void with_mouse_over(const camera &cam, F1 &&on_single, F2 &&on_instanced) {
+    if (const auto hover = mouse_over(cam); std::holds_alternative<render_ref>(hover)) {
+      on_single(std::get<render_ref>(hover));
+    }
+    else if (std::holds_alternative<std::pair<instanced_render_ref, size_t>>(hover)) {
+      auto &[ref, idx] = std::get<std::pair<instanced_render_ref, size_t>>(hover);
+      on_instanced(ref, idx);
+    }
+  }
 
   /**
    * @brief Checks whether we should render the colliders.
@@ -146,6 +188,7 @@ private:
     else if constexpr(type_traits::cvr_same<T, renderable>) return renderables;
     else if constexpr(type_traits::cvr_same<T, instanced_renderable>) return instanced_renderables;
     else if constexpr(type_traits::cvr_same<T, collider>) return colliders;
+    else if constexpr(type_traits::cvr_same<T, instanced_collider>) return instanced_colliders;
     else {
       static_assert(type_traits::invalid<T>, "Type not supported in cache.");
       std::unreachable();
@@ -158,6 +201,7 @@ private:
   }
 
   static inline std::optional<shader_ref> collider_shader{}; //!< The shader to render the colliders with, if any.
+  static inline std::optional<shader_ref> collider_instanced_shader{}; //!< The instanced shader to render the colliders with, if any.
   static inline std::vector<render_object> objects{}; //!< The list of objects in the cache.
   static inline std::vector<instanced_object> instanced_objects{}; //!< The list of instanced objects in the cache.
   static inline std::vector<shader> shaders{}; //!< The list of shaders in the cache.
@@ -165,6 +209,7 @@ private:
   static inline std::vector<renderable> renderables{}; //!< The list of renderables in the cache.
   static inline std::vector<instanced_renderable> instanced_renderables{}; //!< The list of instanced renderables in the cache.
   static inline std::vector<collider> colliders{}; //!< The list of colliders in the cache.
+  static inline std::vector<instanced_collider> instanced_colliders{}; //!< The list of instanced colliders in the cache.
   static inline bool render_colliders = false; //!< Whether to render the colliders.
 };
 

@@ -102,6 +102,9 @@ void shader::set_bool(const unsigned int loc, const bool b) const {
 void shader::set_int(const unsigned int loc, const int i) const {
   activate(); gl(glUniform1i(loc, i));
 }
+void shader::set_uint(const unsigned int loc, const unsigned int i) const {
+  activate(); gl(glUniform1ui(loc, i));
+}
 void shader::set_float(const unsigned int loc, const float f) const {
   activate(); gl(glUniform1f(loc, f));
 }

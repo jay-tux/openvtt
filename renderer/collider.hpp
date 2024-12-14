@@ -8,6 +8,11 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include <string>
+#include <vector>
+#include <vector>
+
+#include "camera.hpp"
+#include "camera.hpp"
 #include "camera.hpp"
 
 namespace openvtt::renderer {
@@ -126,9 +131,14 @@ public:
    */
   [[nodiscard]] constexpr std::pair<glm::vec3, glm::vec3> aabb() const { return {min, max}; }
 
-  ~collider();
+  virtual ~collider();
 
   bool is_hovered = false; //!< Whether the collider is currently hovered by the mouse. This value should be cleared before each frame.
+
+protected:
+  void bind_vao() const;
+  [[nodiscard]] constexpr size_t num_triangles() const { return indices.size() / 3; }
+
 private:
   std::vector<glm::vec3> vertices{}; //!< The vertices of the collider.
   std::vector<unsigned int> indices{}; //!< The indices of the collider.
@@ -137,6 +147,89 @@ private:
   unsigned int ebo = 0; //!< The EBO of the collider, used for rendering.
   glm::vec3 min{}; //!< The minimum point of the AABB.
   glm::vec3 max{}; //!< The maximum point of the AABB;
+};
+
+/**
+ * @brief Class representing an instanced collider.
+ *
+ * The collider is a mesh collider based on triangles. To speed up the ray-cast algorithm, the collider also stores the
+ * AABB (axis-aligned bounding box) of the mesh. This class is used for instanced rendering, where multiple instances of
+ * the same object are rendered with different transformations.
+ */
+class instanced_collider final : public collider {
+public:
+  /**
+   * @brief Constructs a new instanced collider.
+   * @param vertices The vertices to use.
+   * @param indices The indices to use.
+   * @param models The model matrices to use.
+   *
+   * Just like an OpenGL VBO/EBO pair, the vertices and indices are stored in separate arrays. Each triangle is defined
+   * by three consecutive indices, each of which point to a vertex in the vertices array.
+   *
+   * It is recommended not to use the same vertices and indices as the mesh, but rather create a simplified version of
+   * the mesh (for computational efficiency, as the ray-cast algorithm is O(n) in the number of triangles).
+   */
+  instanced_collider(const std::vector<glm::vec3> &vertices, const std::vector<unsigned int> &indices, const std::vector<glm::mat4> &models)
+    : instanced_collider(std::move(collider(vertices, indices)), models) {}
+  constexpr instanced_collider(instanced_collider &&other) noexcept : collider(std::move(other)) {
+    std::swap(models, other.models);
+    std::swap(model_vbo, other.model_vbo);
+  }
+  instanced_collider &operator=(const instanced_collider &other) = delete;
+  instanced_collider &operator=(instanced_collider &&other) noexcept = delete;
+
+  /**
+   * @brief Constructs a new collider from an asset file.
+   * @param asset The path to the asset.
+   * @param models The model matrices to use.
+   * @return The loaded collider.
+   *
+   * The asset's path is computed using @ref openvtt::asset_path. Only vertex positions and face indices are loaded from
+   * the file, using Assimp. If needed the mesh is re-triangulated.
+   */
+  static instanced_collider load_from(const std::string &asset,
+                                                           const std::vector<glm::mat4> &models) {
+      return {collider::load_from(asset), models};
+  }
+
+  /**
+   * @brief Checks if the given ray intersects the collider.
+   * @param r The ray to check.
+   * @return The distance to the intersection point, or infinity if there is no intersection.
+   *
+   * Since the stored vertices are in object space, a model matrix is needed to transform them into world space. The
+   * collider's AABB is also transformed (and the AABB of the transformed AABB is used to speed up the ray-cast
+   * algorithm).
+   *
+   * If the ray doesn't intersect the (transformed) AABB, the function returns infinity. Otherwise, it loops over all
+   * triangles in the mesh, trying to find the closest intersection point (parametric distance along the ray). If no
+   * triangle is intersected by the ray, the function returns infinity.
+   *
+   * The function also returns the index of the hit instance.
+   */
+  [[nodiscard]] std::pair<float, size_t> ray_intersect_any(const ray &r) const;
+
+  /**
+   * @brief Renders the collider.
+   *
+   * The shader should already be set up, as this function only performs the actual draw call. The collider is rendered
+   * as a wireframe mesh, by setting `glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)`. After the draw call, the polygon mode
+   * is reset by calling `glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)`.
+   */
+  void draw_all() const;
+
+  [[nodiscard]] constexpr const glm::mat4 &model(const size_t idx) const { return models[idx]; }
+  [[nodiscard]] constexpr size_t instance_count() const { return models.size(); }
+
+  ~instanced_collider() override;
+
+  size_t highlighted_instance = 0; //!< The index of the highlighted instance. This value should be cleared before each frame.
+
+private:
+  instanced_collider(collider &&coll, const std::vector<glm::mat4> &models);
+  unsigned int model_vbo = 0; //!< The VBO of the model matrices.
+  std::vector<glm::mat4> models{}; //!< The model matrices of the instances.
 };
 }
 

@@ -140,17 +140,17 @@ instanced_object::instanced_object(render_object &&ro, const std::vector<glm::ma
     gl(glVertexAttribDivisor(3 + i, 1));
   }
 
-  auto *model_inv_t = new glm::mat3[models.size()];
+  auto *model_inv_t = new glm::mat4[models.size()];
   for (size_t i = 0; i < models.size(); i++) {
     model_inv_t[i] = transpose(inverse(models[i]));
   }
 
   gl(glGenBuffers(1, &model_inv_t_vbo));
   gl(glBindBuffer(GL_ARRAY_BUFFER, model_inv_t_vbo));
-  gl(glBufferData(GL_ARRAY_BUFFER, models.size() * sizeof(glm::mat3), model_inv_t, GL_STATIC_DRAW));
+  gl(glBufferData(GL_ARRAY_BUFFER, models.size() * sizeof(glm::mat4), model_inv_t, GL_STATIC_DRAW));
   for (unsigned int i = 0; i < 3; i++) {
     gl(glEnableVertexAttribArray(7 + i));
-    gl(glVertexAttribPointer(7 + i, 3, GL_FLOAT, GL_FALSE, sizeof(glm::mat3), reinterpret_cast<void *>(sizeof(glm::vec3) * i)));
+    gl(glVertexAttribPointer(7 + i, 3, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), reinterpret_cast<void *>(sizeof(glm::vec4) * i)));
     gl(glVertexAttribDivisor(7 + i, 1));
   }
 

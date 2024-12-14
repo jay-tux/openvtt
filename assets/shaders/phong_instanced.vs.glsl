@@ -13,6 +13,7 @@ out vec2 out_uvs;
 out vec3 out_normal;
 out vec3 out_pos;
 out vec2 out_pos_ndc;
+out flat int instance_id;
 
 void main() {
     gl_Position = projection * view * model * vec4(pos, 1.0);
@@ -20,4 +21,5 @@ void main() {
     out_normal = normalize(mat3(model_inv_t) * normal);
     out_pos = vec3(model * vec4(pos, 1.0));
     out_pos_ndc = gl_Position.xy / gl_Position.w * 0.5 + 0.5;
+    instance_id = gl_InstanceID;
 }

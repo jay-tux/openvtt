@@ -62,6 +62,12 @@ public:
   /**
    * @brief Sets the uniform with the given location to the given value.
    * @param loc The location of the uniform.
+   * @param i The unsigned integer value to set the uniform to.
+   */
+  void set_uint(unsigned int loc, unsigned int i) const;
+  /**
+   * @brief Sets the uniform with the given location to the given value.
+   * @param loc The location of the uniform.
    * @param f The float value to set the uniform to.
    */
   void set_float(unsigned int loc, float f) const;

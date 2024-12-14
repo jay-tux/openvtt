@@ -86,7 +86,7 @@ protected:
  * call per instance). However, the model matrix (aka transform) of each instance is fixed and cannot be changed.
  * Additionally, these objects don't support the hovering effect (as they don't support colliders).
  */
-class instanced_object final : render_object {
+class instanced_object final : public render_object {
 public:
   /**
    * @brief Construct a new instanced object.
@@ -140,6 +140,8 @@ public:
   constexpr static glm::mat4 model_for(const glm::vec3 &ypr, const glm::vec3 &scale, const glm::vec3 &pos) {
     return glm::mat4(1.0f) | translation(pos) | rescale(scale) | roll(ypr.z) | pitch(ypr.x) | yaw(ypr.y);
   }
+
+  [[nodiscard]] constexpr size_t instance_count() const { return instances; }
 
   ~instanced_object() override;
 private:

@@ -46,17 +46,17 @@ constexpr const char *gl_to_string(const int gl_error) {
  */
 inline void on_gl_error(const int gl_error, const char *file, const int line, const char *call) {
   const std::string src = std::format("{}:{}", file, line);
-  log<log_type::ERROR>(src, std::format("OpenGL error: {} while calling {}", gl_to_string(gl_error), call));
+  log<log_type::ERROR>("OpenGL", std::format("{}: OpenGL error: {} while calling {}", src, gl_to_string(gl_error), call));
 #ifdef OPENVTT_USE_STACK_TRACE
   // ReSharper disable once CppTooWideScopeInitStatement
   const auto stack = std::stacktrace::current();
   for (const auto &loc: stack | std::ranges::views::drop(1)) {
-    log<log_type::DEBUG>(src, std::format("at: {} ({}:{})", loc.description(), loc.source_file(), loc.source_line()));
+    log<log_type::DEBUG>("OpenGL", std::format("at: {} ({}:{})", loc.description(), loc.source_file(), loc.source_line()));
   }
 #endif
 }
 }
 
-#define gl(call) do { (call); const auto _ = glGetError(); if(_ != GL_NO_ERROR) openvtt::renderer::on_gl_error(_, __FILE__, __LINE__, #call); } while(false)
+#define gl(call) do { call; const auto _ = glGetError(); if(_ != GL_NO_ERROR) openvtt::renderer::on_gl_error(_, __FILE__, __LINE__, #call); } while(false)
 
 #endif //GL_WRAPPER_HPP
