@@ -84,6 +84,8 @@ add_executable(openvtt
         renderer/fbo.cpp
         renderer/glad.cpp
         map/map_parser.cpp
+        map/map_visitor.cpp
+        map/object_cache.cpp
 )
 
 target_include_directories(openvtt PRIVATE ${CMAKE_SOURCE_DIR})

@@ -3,10 +3,19 @@ voxels(100, 100) {
 }
 
 objects {
-    suzanne = combine(
-        obj = object("suzanne"),
-        sh = shader("phong", "phong"),
-        tex = texture("plasma"),
-        col = collider("suzanne_collider")
+    tex = texture("plasma");
+
+    suzanne = spawn(
+        "suzanne", mesh = object("suzanne"),
+        phong = shader("phong", "phong"),
+        phong_uniforms = [(8, tex)]
     );
+
+    transform(
+        suzanne,
+        pos = (0, 0.5, 0), rot = (0, 0, 0),
+        scale = (0.5, 0.5, 0.5)
+    );
+
+    add_collider(suzanne, monkey = collider("suzanne_collider"));
 }

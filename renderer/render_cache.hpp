@@ -20,6 +20,10 @@ class t_ref {
 public:
   constexpr T *operator->() const { return &**this; }
 
+  constexpr bool operator==(const t_ref &other) const { return idx == other.idx; }
+  static constexpr t_ref invalid() { return t_ref{-1UL}; }
+  [[nodiscard]] constexpr size_t raw() const { return idx; }
+
 private:
   constexpr explicit t_ref(const size_t idx) : idx{idx} {}
   size_t idx;
