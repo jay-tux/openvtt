@@ -11,6 +11,8 @@ objects {
         phong_uniforms = [(4, tex), (5, tex)]
     );
 
+    enable_highlight(phong);
+
     transform(
         suzanne,
         pos = (0, 0.5, 0), rot = (0, 0, 0),
