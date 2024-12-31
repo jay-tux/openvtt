@@ -13,7 +13,8 @@ namespace openvtt::map {
 struct font { std::string asset; };
 struct map_desc {
   std::vector<renderer::render_ref> scene;
-  std::vector<renderer::shader_ref> requires_highlight;
+  std::unordered_map<renderer::shader_ref, int> requires_highlight;
+  std::optional<int> highlight_binding;
 
   static map_desc parse_from(const std::string &asset);
 };

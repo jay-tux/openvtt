@@ -3,6 +3,8 @@ voxels(100, 100) {
 }
 
 objects {
+    highlight_bind(15);
+
     tex = texture("plasma");
 
     suzanne = spawn(
@@ -11,7 +13,7 @@ objects {
         phong_uniforms = [(4, tex), (5, tex)]
     );
 
-    enable_highlight(phong);
+    enable_highlight(phong, "highlight_map");
 
     transform(
         suzanne,

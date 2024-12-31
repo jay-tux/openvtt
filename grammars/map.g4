@@ -39,6 +39,9 @@ expr: x=IDENTIFIER                                  #idExpr
     ;
 
 stmt: e=expr ';'                                    #exprStmt
+    | 'enable_highlight' '(' x=expr ',' uniform=expr ')' ';'
+                                                    #enableHighlightStmt
+    | 'highlight_bind' '(' x=expr ')' ';'           #highlightBindStmt
     ;
 
 /*

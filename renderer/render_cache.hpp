@@ -21,6 +21,7 @@ public:
   constexpr T *operator->() const { return &**this; }
 
   constexpr bool operator==(const t_ref &other) const { return idx == other.idx; }
+  constexpr bool operator!=(const t_ref &other) const { return idx != other.idx; }
   static constexpr t_ref invalid() { return t_ref{-1UL}; }
   [[nodiscard]] constexpr size_t raw() const { return idx; }
 
@@ -41,6 +42,13 @@ using collider_ref = t_ref<collider>;
 using instanced_collider_ref = t_ref<instanced_collider>;
 class render_cache;
 }
+
+template <typename T>
+struct std::hash<openvtt::renderer::t_ref<T>> {
+  static size_t operator()(const openvtt::renderer::t_ref<T> &ref) noexcept {
+    return std::hash<size_t>{}(ref.raw());
+  }
+};
 
 #include "renderable.hpp"
 

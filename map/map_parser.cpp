@@ -42,7 +42,17 @@ map_desc map_desc::parse_from(const std::string &asset) {
   visitor.file = path;
   visitor.visit(parser.program());
 
+  if (!visitor.requires_highlight.empty() && !visitor.highlight_binding.has_value()) {
+    log<log_type::ERROR>("map_parser", "Highlighting requires a binding index, but none was provided. Ignoring all highlight bindings.");
+    visitor.requires_highlight.clear();
+  }
+  else if (visitor.requires_highlight.empty() && visitor.highlight_binding.has_value()) {
+    log<log_type::WARNING>("map_parser", "Highlighting binding index provided, but no shaders require highlighting.");
+  }
+
   return {
-    .scene = {visitor.spawned.begin(), visitor.spawned.end()}
+    .scene = {visitor.spawned.begin(), visitor.spawned.end()},
+    .requires_highlight = std::move(visitor.requires_highlight),
+    .highlight_binding = std::move(visitor.highlight_binding)
   };
 }

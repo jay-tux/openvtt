@@ -10,13 +10,6 @@
 
 #include "object_cache.hpp"
 
-template <typename T>
-struct std::hash<openvtt::renderer::t_ref<T>> { // NOLINT(*-dcl58-cpp) // false positive
-  static size_t operator()(const openvtt::renderer::t_ref<T> &ref) noexcept {
-    return std::hash<size_t>{}(ref.raw());
-  }
-};
-
 namespace openvtt::map {
 struct identifier {
   std::string name;
@@ -30,6 +23,8 @@ struct map_visitor final : mapVisitor {
   std::string file;
   object_cache cache {};
   std::unordered_set<renderer::render_ref> spawned{};
+  std::unordered_map<renderer::shader_ref, int> requires_highlight{};
+  std::optional<int> highlight_binding{};
 
   constexpr loc at(const antlr4::ParserRuleContext &ctx) const {
     return {ctx, file};
@@ -194,6 +189,10 @@ struct map_visitor final : mapVisitor {
   std::any visitAddColliderExpr(mapParser::AddColliderExprContext *context) override;
 
   std::any visitExprStmt(mapParser::ExprStmtContext *context) override;
+
+  std::any visitEnableHighlightStmt(mapParser::EnableHighlightStmtContext *context) override;
+
+  std::any visitHighlightBindStmt(mapParser::HighlightBindStmtContext *context) override;
 
   ~map_visitor() override = default;
 };

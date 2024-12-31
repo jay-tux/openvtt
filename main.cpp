@@ -103,14 +103,14 @@ int main(int argc, const char **argv) {
       s->set_bool(uniform, (*r.coll)->is_hovered);
     }
   });
-  const auto lighting_monkeys = setup_phong_shading<10, instanced_renderable>(cam, lights, [](const shader_ref &s, const instanced_renderable &r) {
-    if (r.coll.has_value()) {
-      const unsigned int uniform = s->loc_for("is_highlighted");
-      const unsigned int inst_uniform = s->loc_for("highlighted_instance");
-      s->set_bool(uniform, (*r.coll)->is_hovered);
-      s->set_uint(inst_uniform, (*r.coll)->highlighted_instance);
-    }
-  });
+  // const auto lighting_monkeys = setup_phong_shading<10, instanced_renderable>(cam, lights, [](const shader_ref &s, const instanced_renderable &r) {
+  //   if (r.coll.has_value()) {
+  //     const unsigned int uniform = s->loc_for("is_highlighted");
+  //     const unsigned int inst_uniform = s->loc_for("highlighted_instance");
+  //     s->set_bool(uniform, (*r.coll)->is_hovered);
+  //     s->set_uint(inst_uniform, (*r.coll)->highlighted_instance);
+  //   }
+  // });
 
   using highlighter = hover_highlighter;
 
@@ -122,6 +122,14 @@ int main(int argc, const char **argv) {
     cam.handle_input();
 
     highlighter::highlight_checking(cam);
+
+    if (map.highlight_binding.has_value()) {
+      highlighter::bind_highlight_tex(*map.highlight_binding);
+
+      for (const auto &[s, idx] : map.requires_highlight) {
+        s->set_int(idx, *map.highlight_binding);
+      }
+    }
 
     // perlin_square->draw(cam, [&scales](const shader_ref &sr, const renderable &) {
     //   sr->set_float(4, scales[0]);

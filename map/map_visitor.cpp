@@ -170,3 +170,22 @@ std::any map_visitor::visitExprStmt(mapParser::ExprStmtContext *context) {
   visit_through(context->e, at(*context));
   return no_value{at(*context)}; // no reasonable return value possible
 }
+
+std::any map_visitor::visitEnableHighlightStmt(mapParser::EnableHighlightStmtContext *context) {
+  visit_should_be<shader_ref>(context->x, at(*context)) | [this, context](const shader_ref sh) {
+    visit_should_be<std::string>(context->uniform, at(*context)) | [this, sh](const std::string &uniform) {
+      const auto uniform_idx = sh->loc_for(uniform);
+      requires_highlight[sh] = uniform_idx;
+    };
+  };
+
+  return no_value{at(*context)}; // no reasonable return value possible
+}
+
+std::any map_visitor::visitHighlightBindStmt(mapParser::HighlightBindStmtContext *context) {
+  visit_should_be<int>(context->x, at(*context)) | [this](const int idx) {
+    highlight_binding = idx;
+  };
+
+  return no_value{at(*context)}; // no reasonable return value possible
+}
