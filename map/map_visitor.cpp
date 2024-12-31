@@ -125,7 +125,8 @@ std::any map_visitor::visitSpawnExpr(mapParser::SpawnExprContext *context) {
   const auto sh = args[2].should_be<shader_ref>();
   std::vector<std::pair<unsigned int, texture_ref>> textures;
   for (const auto tex_pre = args[3].should_be<std::vector<value>>(); const auto &t: tex_pre) {
-    const auto [idx, tex] = t.should_be<value_pair>().as_pair(); // TODO does not behave?
+    const auto p = t.should_be<value_pair>();
+    const auto [idx, tex] = p.as_pair(); // do not merge with p ~> otherwise .should_be result gets destroyed
     const auto idx_fix = idx.should_be<int>();
     const auto tex_fix = tex.should_be<texture_ref>();
     textures.emplace_back(idx_fix, tex_fix);

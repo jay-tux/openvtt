@@ -92,11 +92,14 @@ public:
   template <valid_value T>
   constexpr T &as() { return std::get<T>(x); }
   template <valid_value T>
-  [[nodiscard]] constexpr bool is() const { return std::holds_alternative<T>(x); }
+  [[nodiscard]] constexpr bool is() const { return !x.valueless_by_exception() && std::holds_alternative<T>(x); }
   template <typename F>
   constexpr auto visit(F &&f) { return std::visit(f, x); }
 
   [[nodiscard]] constexpr std::string type_name() const {
+    if (x.valueless_by_exception()) {
+      return "(invalid type; no value)";
+    }
     return std::visit([]<typename T>(const T &){ return map::type_name<T>(); }, x);
   }
 
@@ -140,6 +143,7 @@ inline T default_value_v = default_value<T>::value;
 template<valid_value T>
 T value::should_be() const {
   if (is<T>()) return as<T>();
+
   renderer::log<renderer::log_type::ERROR>("object_cache",
     std::format("Expected value of type {}, but got value of type {} at {}",
       map::type_name<T>(), type_name(), generated.str()

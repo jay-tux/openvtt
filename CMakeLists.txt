@@ -100,6 +100,7 @@ target_link_libraries(openvtt PRIVATE
         stb::stb
         antlr4_static
         map_spec
+        stdc++exp
 )
 
 if (OPENVTT_USE_STACK_TRACE)
