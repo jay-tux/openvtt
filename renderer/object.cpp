@@ -23,24 +23,24 @@ render_object::render_object(const std::vector<vertex_spec> &vs, const std::vect
     vertex_buffer.push_back(norm.x); vertex_buffer.push_back(norm.y); vertex_buffer.push_back(norm.z);
   }
 
-  gl(glGenVertexArrays(1, &vao));
-  gl(glBindVertexArray(vao));
+  GL_genVertexArrays(1, &vao);
+  GL_bindVertexArray(vao);
 
-  gl(glGenBuffers(1, &vbo));
-  gl(glBindBuffer(GL_ARRAY_BUFFER, vbo));
-  gl(glBufferData(GL_ARRAY_BUFFER, vertex_buffer.size() * sizeof(float), vertex_buffer.data(), GL_STATIC_DRAW));
-  gl(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), nullptr));
-  gl(glEnableVertexAttribArray(0));
-  gl(glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), reinterpret_cast<void *>(3 * sizeof(float))));
-  gl(glEnableVertexAttribArray(1));
-  gl(glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), reinterpret_cast<void *>(5 * sizeof(float))));
-  gl(glEnableVertexAttribArray(2));
+  GL_genBuffers(1, &vbo);
+  GL_bindBuffer(GL_ARRAY_BUFFER, vbo);
+  GL_bufferData(GL_ARRAY_BUFFER, vertex_buffer.size() * sizeof(float), vertex_buffer.data(), GL_STATIC_DRAW);
+  GL_vertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), nullptr);
+  GL_enableVertexAttribArray(0);
+  GL_vertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), reinterpret_cast<void *>(3 * sizeof(float)));
+  GL_enableVertexAttribArray(1);
+  GL_vertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), reinterpret_cast<void *>(5 * sizeof(float)));
+  GL_enableVertexAttribArray(2);
 
-  gl(glGenBuffers(1, &ebo));
-  gl(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo));
-  gl(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * index.size(), index.data(), GL_STATIC_DRAW));
+  GL_genBuffers(1, &ebo);
+  GL_bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+  GL_bufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * index.size(), index.data(), GL_STATIC_DRAW);
 
-  gl(glBindVertexArray(0));
+  GL_bindVertexArray(0);
 }
 
 render_object render_object::load_from(const std::string &asset) {
@@ -112,32 +112,32 @@ render_object render_object::load_from(const std::string &asset) {
 }
 
 void render_object::draw(const shader &s) const {
-  gl(glBindVertexArray(vao));
+  GL_bindVertexArray(vao);
   s.activate();
-  gl(glDrawElements(GL_TRIANGLES, elements, GL_UNSIGNED_INT, nullptr));
+  GL_drawElements(GL_TRIANGLES, elements, GL_UNSIGNED_INT, nullptr);
 }
 
 void render_object::bind_vao() const {
-  gl(glBindVertexArray(vao));
+  GL_bindVertexArray(vao);
 }
 
 render_object::~render_object() {
-  gl(glBindVertexArray(0));
-  gl(glDeleteVertexArrays(1, &vao));
-  gl(glDeleteBuffers(1, &vbo));
-  gl(glDeleteBuffers(1, &ebo));
+  GL_bindVertexArray(0);
+  GL_deleteVertexArrays(1, &vao);
+  GL_deleteBuffers(1, &vbo);
+  GL_deleteBuffers(1, &ebo);
 }
 
 instanced_object::instanced_object(render_object &&ro, const std::vector<glm::mat4> &models)
   : render_object(std::move(ro)) {
   bind_vao();
-  gl(glGenBuffers(1, &model_vbo));
-  gl(glBindBuffer(GL_ARRAY_BUFFER, model_vbo));
-  gl(glBufferData(GL_ARRAY_BUFFER, models.size() * sizeof(glm::mat4), models.data(), GL_STATIC_DRAW));
+  GL_genBuffers(1, &model_vbo);
+  GL_bindBuffer(GL_ARRAY_BUFFER, model_vbo);
+  GL_bufferData(GL_ARRAY_BUFFER, models.size() * sizeof(glm::mat4), models.data(), GL_STATIC_DRAW);
   for (unsigned int i = 0; i < 4; i++) {
-    gl(glEnableVertexAttribArray(3 + i));
-    gl(glVertexAttribPointer(3 + i, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), reinterpret_cast<void *>(sizeof(glm::vec4) * i)));
-    gl(glVertexAttribDivisor(3 + i, 1));
+    GL_enableVertexAttribArray(3 + i);
+    GL_vertexAttribPointer(3 + i, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), reinterpret_cast<void *>(sizeof(glm::vec4) * i));
+    GL_vertexAttribDivisor(3 + i, 1);
   }
 
   auto *model_inv_t = new glm::mat4[models.size()];
@@ -145,13 +145,13 @@ instanced_object::instanced_object(render_object &&ro, const std::vector<glm::ma
     model_inv_t[i] = transpose(inverse(models[i]));
   }
 
-  gl(glGenBuffers(1, &model_inv_t_vbo));
-  gl(glBindBuffer(GL_ARRAY_BUFFER, model_inv_t_vbo));
-  gl(glBufferData(GL_ARRAY_BUFFER, models.size() * sizeof(glm::mat4), model_inv_t, GL_STATIC_DRAW));
+  GL_genBuffers(1, &model_inv_t_vbo);
+  GL_bindBuffer(GL_ARRAY_BUFFER, model_inv_t_vbo);
+  GL_bufferData(GL_ARRAY_BUFFER, models.size() * sizeof(glm::mat4), model_inv_t, GL_STATIC_DRAW);
   for (unsigned int i = 0; i < 3; i++) {
-    gl(glEnableVertexAttribArray(7 + i));
-    gl(glVertexAttribPointer(7 + i, 3, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), reinterpret_cast<void *>(sizeof(glm::vec4) * i)));
-    gl(glVertexAttribDivisor(7 + i, 1));
+    GL_enableVertexAttribArray(7 + i);
+    GL_vertexAttribPointer(7 + i, 3, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), reinterpret_cast<void *>(sizeof(glm::vec4) * i));
+    GL_vertexAttribDivisor(7 + i, 1);
   }
 
   instances = models.size();
@@ -162,10 +162,10 @@ instanced_object::instanced_object(render_object &&ro, const std::vector<glm::ma
 void instanced_object::draw_instanced(const shader &s) const {
   bind_vao();
   s.activate();
-  gl(glDrawElementsInstanced(GL_TRIANGLES, elements, GL_UNSIGNED_INT, nullptr, instances));
+  GL_drawElementsInstanced(GL_TRIANGLES, elements, GL_UNSIGNED_INT, nullptr, instances);
 }
 
 instanced_object::~instanced_object() {
-  gl(glDeleteBuffers(1, &model_vbo));
-  gl(glDeleteBuffers(1, &model_inv_t_vbo));
+  GL_deleteBuffers(1, &model_vbo);
+  GL_deleteBuffers(1, &model_inv_t_vbo);
 }

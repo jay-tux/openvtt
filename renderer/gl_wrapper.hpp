@@ -11,6 +11,7 @@
 #endif
 #include "glad.h"
 #include "log_view.hpp"
+#include "gl_macros.hpp"
 
 namespace openvtt::renderer {
 /**

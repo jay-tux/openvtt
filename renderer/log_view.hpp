@@ -10,6 +10,32 @@
 #include <iostream>
 #include <format>
 
+template <typename T>
+requires(!std::same_as<T, void> && !std::same_as<T, const void> && !std::same_as<T, char> && !std::same_as<T, const char>)
+struct std::formatter<T *, char> {
+  std::formatter<const void *> base_const{};
+
+  template <typename PC> constexpr auto parse(PC &ctx) {
+    return base_const.parse(ctx);
+  }
+  template <typename FC> constexpr typename FC::iterator format(T *ptr, FC &ctx) const {
+    return base_const.format(static_cast<const void *>(ptr), ctx);
+  }
+};
+
+template <typename T, size_t s>
+requires(!std::same_as<T, char> && !std::same_as<T, const char>)
+struct std::formatter<T[s], char> {
+  std::formatter<const T *> base_const{};
+
+  template <typename PC> constexpr auto parse(PC &ctx) {
+    return base_const.parse(ctx);
+  }
+  template <typename FC> constexpr typename FC::iterator format(T (&arr)[s], FC &ctx) const {
+    return base_const.format(arr, ctx);
+  }
+};
+
 namespace openvtt::renderer {
 /**
  * @brief Enum class representing different types of log messages.
