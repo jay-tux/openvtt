@@ -8,7 +8,7 @@ objects {
     suzanne = spawn(
         "suzanne", mesh = object("suzanne"),
         phong = shader("phong", "phong"),
-        phong_uniforms = [(8, tex)]
+        phong_uniforms = [(4, tex), (5, tex)]
     );
 
     transform(

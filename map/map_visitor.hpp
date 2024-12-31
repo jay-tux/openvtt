@@ -61,6 +61,12 @@ struct map_visitor final : mapVisitor {
 
     const auto *ptr = std::any_cast<T>(&node);
     if (ptr == nullptr) {
+      if constexpr(std::same_as<T, float>) {
+        if (const auto *ptr2 = std::any_cast<int>(&node); ptr2 != nullptr) {
+          return static_cast<float>(*ptr2);
+        }
+      }
+
       renderer::log<renderer::log_type::ERROR>("map_visitor", std::format("Expected {} at {}, but got value of type {}",
         desc, at.str(), demangle(node.type().name())
       ));
@@ -119,6 +125,9 @@ struct map_visitor final : mapVisitor {
   std::optional<T> visit_maybe_value(antlr4::ParserRuleContext *c, const loc &at) {
     const auto v = visit_to_value(c, at);
     if (v.is<T>()) return v.as<T>();
+    if constexpr(std::same_as<T, float>) {
+      if (v.is<int>()) return static_cast<float>(v.as<int>());
+    }
 
     renderer::log<renderer::log_type::ERROR>("map_visitor",
       std::format("Expected value of type {}, but got value of type {} at {}",
@@ -135,7 +144,7 @@ struct map_visitor final : mapVisitor {
 
   std::optional<std::vector<value>> expect_n_args(antlr4::ParserRuleContext *c, const loc &at, const size_t n) {
     const auto vec = visit_no_value<std::vector<value>>(c, at, "argument (value) list");
-    if (vec.size() != 4) {
+    if (vec.size() != n) {
       renderer::log<renderer::log_type::ERROR>("map_visitor",
         std::format("Expected {} arguments, but got {} at {}", n, vec.size(), this->at(*c).str())
       );

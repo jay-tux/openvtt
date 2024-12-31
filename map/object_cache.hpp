@@ -143,6 +143,9 @@ inline T default_value_v = default_value<T>::value;
 template<valid_value T>
 T value::should_be() const {
   if (is<T>()) return as<T>();
+  if constexpr(std::same_as<T, float>) {
+    if (is<int>()) return static_cast<float>(as<int>());
+  }
 
   renderer::log<renderer::log_type::ERROR>("object_cache",
     std::format("Expected value of type {}, but got value of type {} at {}",
