@@ -57,8 +57,9 @@ private:
 
 template <typename T>
 concept valid_value = std::same_as<T, int> || std::same_as<T, float> || std::same_as<T, std::string> ||
-  std::same_as<T, glm::vec3> || std::same_as<T, renderer::object_ref> || std::same_as<T, renderer::instanced_object_ref> ||
-  std::same_as<T, renderer::shader_ref> || std::same_as<T, renderer::texture_ref> || std::same_as<T, renderer::collider_ref> ||
+  std::same_as<T, glm::vec3>  || std::same_as<T, glm::mat4> || std::same_as<T, renderer::object_ref> ||
+  std::same_as<T, renderer::instanced_object_ref> || std::same_as<T, renderer::shader_ref> ||
+  std::same_as<T, renderer::texture_ref> || std::same_as<T, renderer::collider_ref> ||
   std::same_as<T, renderer::instanced_collider_ref> || std::same_as<T, renderer::render_ref> ||
   std::same_as<T, renderer::instanced_render_ref> || std::same_as<T, value_pair> || std::same_as<T, std::vector<value>>;
 
@@ -68,6 +69,7 @@ constexpr std::string type_name() {
   if constexpr(std::same_as<T, float>) return "float";
   if constexpr(std::same_as<T, std::string>) return "string";
   if constexpr(std::same_as<T, glm::vec3>) return "vec3";
+  if constexpr(std::same_as<T, glm::mat4>) return "mat4[transform]";
   if constexpr(std::same_as<T, renderer::object_ref>) return "object";
   if constexpr(std::same_as<T, renderer::instanced_object_ref>) return "instanced_object";
   if constexpr(std::same_as<T, renderer::shader_ref>) return "shader";
@@ -109,9 +111,9 @@ public:
   [[nodiscard]] constexpr const loc &pos() const { return generated; }
 
 private:
-  // TODO: figure out font, transform
+  // TODO: figure out font
   using var_t = std::variant<
-    int, float, std::string, glm::vec3,
+    int, float, std::string, glm::vec3, glm::mat4,
     renderer::object_ref, renderer::instanced_object_ref, renderer::shader_ref, renderer::texture_ref,
     renderer::collider_ref, renderer::instanced_collider_ref, renderer::render_ref, renderer::instanced_render_ref,
     value_pair, std::vector<value>
@@ -126,6 +128,7 @@ template <> struct default_value<int> { static constexpr int value = 0; };
 template <> struct default_value<float> { static constexpr float value = 0.0f; };
 template <> struct default_value<std::string> { static constexpr std::string value{}; };
 template <> struct default_value<glm::vec3> { static constexpr auto value = glm::vec3{0.0f}; };
+template <> struct default_value<glm::mat4> { static constexpr auto value = glm::mat4{1.0f}; };
 template <> struct default_value<renderer::object_ref> { static constexpr renderer::object_ref value = renderer::object_ref::invalid(); };
 template <> struct default_value<renderer::instanced_object_ref> { static constexpr renderer::instanced_object_ref value = renderer::instanced_object_ref::invalid(); };
 template <> struct default_value<renderer::shader_ref> { static constexpr renderer::shader_ref value = renderer::shader_ref::invalid(); };

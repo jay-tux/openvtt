@@ -18,24 +18,29 @@ int main(int argc, const char **argv) {
   auto &win = window::get();
   auto map = map_desc::parse_from("examples/suzannes");
 
-  // constexpr glm::vec3 positions[5] {
-  //   glm::vec3(-0.23f, 0.45f, -0.78f) * 3.0f,
-  //   glm::vec3(0.67f, -0.34f, 0.12f) * 3.0f,
-  //   glm::vec3(-0.56f, 0.89f, -0.45f) * 3.0f,
-  //   glm::vec3(0.12f, -0.67f, 0.34f) * 3.0f,
-  //   glm::vec3(-0.78f, 0.23f, -0.56f) * 3.0f
-  // };
-  // const glm::vec3 rotations[5] {
-  //   glm::sphericalRand(1.0f) * 360.0f,
-  //   glm::sphericalRand(1.0f) * 360.0f,
-  //   glm::sphericalRand(1.0f) * 360.0f,
-  //   glm::sphericalRand(1.0f) * 360.0f,
-  //   glm::sphericalRand(1.0f) * 360.0f
-  // };
-  // constexpr glm::vec3 scales_[5] {
-  //   glm::vec3{0.18}, glm::vec3{0.418}, glm::vec3{0.28}, glm::vec3{0.37}, glm::vec3{0.64}
-  // };
-  //
+  constexpr glm::vec3 positions[5] {
+    glm::vec3(-0.23f, 0.45f, -0.78f) * 3.0f,
+    glm::vec3(0.67f, -0.34f, 0.12f) * 3.0f,
+    glm::vec3(-0.56f, 0.89f, -0.45f) * 3.0f,
+    glm::vec3(0.12f, -0.67f, 0.34f) * 3.0f,
+    glm::vec3(-0.78f, 0.23f, -0.56f) * 3.0f
+  };
+  const glm::vec3 rotations[5] {
+    glm::sphericalRand(1.0f) * 360.0f,
+    glm::sphericalRand(1.0f) * 360.0f,
+    glm::sphericalRand(1.0f) * 360.0f,
+    glm::sphericalRand(1.0f) * 360.0f,
+    glm::sphericalRand(1.0f) * 360.0f
+  };
+  constexpr glm::vec3 scales_[5] {
+    glm::vec3{0.18}, glm::vec3{0.418}, glm::vec3{0.28}, glm::vec3{0.37}, glm::vec3{0.64}
+  };
+  for (int i = 0; i < 5; ++i) {
+    std::cout << "(" << positions[i].x << ", " << positions[i].y << ", " << positions[i].z << "), "
+              << "(" << rotations[i].x << ", " << rotations[i].y << ", " << rotations[i].z << "), "
+              << "(" << scales_[i].x << ", " << scales_[i].y << ", " << scales_[i].z << ")\n";
+  }
+
   // std::vector transforms {
   //   instanced_object::model_for(rotations[0], scales_[0], positions[0]),
   //   instanced_object::model_for(rotations[1], scales_[1], positions[1]),
@@ -99,18 +104,20 @@ int main(int argc, const char **argv) {
   });
   const auto lighting_suzanne = setup_phong_shading<10>(cam, lights, [](const shader_ref &s, const renderable &r) {
     if (r.coll.has_value()) {
+      // TODO: somehow migrate this to scene files
       const unsigned int uniform = s->loc_for("is_highlighted");
       s->set_bool(uniform, (*r.coll)->is_hovered);
     }
   });
-  // const auto lighting_monkeys = setup_phong_shading<10, instanced_renderable>(cam, lights, [](const shader_ref &s, const instanced_renderable &r) {
-  //   if (r.coll.has_value()) {
-  //     const unsigned int uniform = s->loc_for("is_highlighted");
-  //     const unsigned int inst_uniform = s->loc_for("highlighted_instance");
-  //     s->set_bool(uniform, (*r.coll)->is_hovered);
-  //     s->set_uint(inst_uniform, (*r.coll)->highlighted_instance);
-  //   }
-  // });
+  const auto lighting_monkeys = setup_phong_shading<10, instanced_renderable>(cam, lights, [](const shader_ref &s, const instanced_renderable &r) {
+    if (r.coll.has_value()) {
+      // TODO: somehow migrate this to scene files
+      const unsigned int uniform = s->loc_for("is_highlighted");
+      const unsigned int inst_uniform = s->loc_for("highlighted_instance");
+      s->set_bool(uniform, (*r.coll)->is_hovered);
+      s->set_uint(inst_uniform, (*r.coll)->highlighted_instance);
+    }
+  });
 
   using highlighter = hover_highlighter;
 
@@ -147,6 +154,9 @@ int main(int argc, const char **argv) {
 
     for (const auto &r : map.scene) {
       r->draw(cam, lighting_suzanne);
+    }
+    for (const auto &i : map.scene_instances) {
+      i->draw(cam, lighting_monkeys);
     }
 
     cache::draw_colliders(cam);

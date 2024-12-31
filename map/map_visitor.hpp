@@ -23,6 +23,7 @@ struct map_visitor final : mapVisitor {
   std::string file;
   object_cache cache {};
   std::unordered_set<renderer::render_ref> spawned{};
+  std::unordered_set<renderer::instanced_render_ref> spawned_instances{};
   std::unordered_map<renderer::shader_ref, int> requires_highlight{};
   std::optional<int> highlight_binding{};
 
@@ -156,11 +157,19 @@ struct map_visitor final : mapVisitor {
 
   std::any visitLoadObject(mapParser::LoadObjectContext *context) override;
 
+  std::any visitLoadInstancedObject(mapParser::LoadInstancedObjectContext *context) override;
+
   std::any visitLoadShader(mapParser::LoadShaderContext *context) override;
 
   std::any visitLoadTexture(mapParser::LoadTextureContext *context) override;
 
   std::any visitLoadCollider(mapParser::LoadColliderContext *context) override;
+
+  std::any visitLoadInstancedCollider(mapParser::LoadInstancedColliderContext *context) override;
+
+  std::any visitLoadTransform(mapParser::LoadTransformContext *context) override;
+
+  std::any visitEmptyListExpr(mapParser::EmptyListExprContext *context) override;
 
   std::any visitExprList(mapParser::ExprListContext *context) override;
 
@@ -184,15 +193,19 @@ struct map_visitor final : mapVisitor {
 
   std::any visitSpawnExpr(mapParser::SpawnExprContext *context) override;
 
-  std::any visitTransformExpr(mapParser::TransformExprContext *context) override;
+  std::any visitInstancedSpawnExpr(mapParser::InstancedSpawnExprContext *context) override;
 
-  std::any visitAddColliderExpr(mapParser::AddColliderExprContext *context) override;
+  std::any visitTransformExpr(mapParser::TransformExprContext *context) override;
 
   std::any visitExprStmt(mapParser::ExprStmtContext *context) override;
 
   std::any visitEnableHighlightStmt(mapParser::EnableHighlightStmtContext *context) override;
 
   std::any visitHighlightBindStmt(mapParser::HighlightBindStmtContext *context) override;
+
+  std::any visitAddColliderStmt(mapParser::AddColliderStmtContext *context) override;
+
+  std::any visitAddInstancedColliderStmt(mapParser::AddInstancedColliderStmtContext *context) override;
 
   ~map_visitor() override = default;
 };

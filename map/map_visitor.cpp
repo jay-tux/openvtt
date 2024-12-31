@@ -34,6 +34,22 @@ std::any map_visitor::visitLoadObject(mapParser::LoadObjectContext *context) {
   };
 }
 
+std::any map_visitor::visitLoadInstancedObject(mapParser::LoadInstancedObjectContext *context) {
+  const auto asset = visit_maybe_value<std::string>(context->asset, at(*context));
+  const auto transforms = visit_maybe_value<std::vector<value>>(context->ts, at(*context));
+  if (asset.has_value() && transforms.has_value()) {
+    std::vector<glm::mat4> mats;
+    mats.reserve(transforms->size());
+    for (const auto &t: *transforms) {
+      const auto m = t.should_be<glm::mat4>();
+      mats.push_back(m);
+    }
+
+    return value{render_cache::load<instanced_object>(*asset, mats), at(*context)};
+  }
+  return value{instanced_object_ref::invalid(), at(*context)};
+}
+
 std::any map_visitor::visitLoadShader(mapParser::LoadShaderContext *context) {
   const auto vs = visit_maybe_value<std::string>(context->vs, at(*context));
   const auto fs = visit_maybe_value<std::string>(context->fs, at(*context));
@@ -56,6 +72,33 @@ std::any map_visitor::visitLoadCollider(mapParser::LoadColliderContext *context)
       []{ return collider_ref::invalid(); },
     at(*context)
   };
+}
+
+std::any map_visitor::visitLoadInstancedCollider(mapParser::LoadInstancedColliderContext *context) {
+  const auto asset = visit_maybe_value<std::string>(context->asset, at(*context));
+  const auto transforms = visit_maybe_value<std::vector<value>>(context->ts, at(*context));
+  if (asset.has_value() && transforms.has_value()) {
+    std::vector<glm::mat4> mats;
+    mats.reserve(transforms->size());
+    for (const auto &t: *transforms) {
+      const auto m = t.should_be<glm::mat4>();
+      mats.push_back(m);
+    }
+
+    return value{render_cache::load<instanced_collider>(*asset, mats), at(*context)};
+  }
+  return value{instanced_collider_ref::invalid(), at(*context)};
+}
+
+std::any map_visitor::visitLoadTransform(mapParser::LoadTransformContext *context) {
+  const auto pos = visit_maybe_value<glm::vec3>(context->p, at(*context));
+  const auto rot = visit_maybe_value<glm::vec3>(context->r, at(*context));
+  const auto scale = visit_maybe_value<glm::vec3>(context->s, at(*context));
+
+  if (pos.has_value() && rot.has_value() && scale.has_value()) {
+    return value{instanced_object::model_for(*rot, *scale, *pos), at(*context)};
+  }
+  return value{glm::mat4{1.0f}, at(*context)};
 }
 
 std::any map_visitor::visitExprList(mapParser::ExprListContext *context) {
@@ -100,6 +143,10 @@ std::any map_visitor::visitVec3Expr(mapParser::Vec3ExprContext *context) {
   return value{glm::vec3{x, y, z}, at(*context)};
 }
 
+std::any map_visitor::visitEmptyListExpr(mapParser::EmptyListExprContext *context) {
+  return value{std::vector<value>{}, at(*context)};
+}
+
 std::any map_visitor::visitListExpr(mapParser::ListExprContext *context) {
   return value{visit_no_value<std::vector<value>>(context->exprs, at(*context), "value list"), at(*context)};
 }
@@ -133,12 +180,31 @@ std::any map_visitor::visitSpawnExpr(mapParser::SpawnExprContext *context) {
   }
 
   const auto ref = render_cache::construct<renderable>(name, obj, sh, uniforms::from_shader(sh), textures);
-  if (args.size() == 5) {
-    const auto coll = args[4].should_be<collider_ref>();
-    ref->coll = coll;
-  }
 
   spawned.insert(ref);
+  return value{ref, at(*context)};
+}
+
+std::any map_visitor::visitInstancedSpawnExpr(mapParser::InstancedSpawnExprContext *context) {
+  const auto args_pre = expect_n_args(context->args, at(*context), 4);
+  if (!args_pre.has_value()) return render_ref::invalid();
+  const auto &args = *args_pre;
+
+  const auto name = args[0].should_be<std::string>();
+  const auto obj = args[1].should_be<instanced_object_ref>();
+  const auto sh = args[2].should_be<shader_ref>();
+  std::vector<std::pair<unsigned int, texture_ref>> textures;
+  for (const auto tex_pre = args[3].should_be<std::vector<value>>(); const auto &t: tex_pre) {
+    const auto p = t.should_be<value_pair>();
+    const auto [idx, tex] = p.as_pair(); // do not merge with p ~> otherwise .should_be result gets destroyed
+    const auto idx_fix = idx.should_be<int>();
+    const auto tex_fix = tex.should_be<texture_ref>();
+    textures.emplace_back(idx_fix, tex_fix);
+  }
+
+  const auto ref = render_cache::construct<instanced_renderable>(name, obj, sh, instanced_uniforms::from_shader(sh), textures);
+
+  spawned_instances.insert(ref);
   return value{ref, at(*context)};
 }
 
@@ -152,17 +218,6 @@ std::any map_visitor::visitTransformExpr(mapParser::TransformExprContext *contex
   const auto scale = (*args)[3].should_be<glm::vec3>();
 
   ref->position = pos; ref->rotation = rot; ref->scale = scale;
-  return no_value{at(*context)}; // no reasonable return value possible
-}
-
-std::any map_visitor::visitAddColliderExpr(mapParser::AddColliderExprContext *context) {
-  const auto args = expect_n_args(context->args, at(*context), 2);
-  if (!args.has_value()) return no_value{at(*context)}; // no reasonable return value possible
-
-  const auto ref = (*args)[0].should_be<render_ref>();
-  const auto coll = (*args)[1].should_be<collider_ref>();
-  ref->coll = coll;
-
   return no_value{at(*context)}; // no reasonable return value possible
 }
 
@@ -185,6 +240,26 @@ std::any map_visitor::visitEnableHighlightStmt(mapParser::EnableHighlightStmtCon
 std::any map_visitor::visitHighlightBindStmt(mapParser::HighlightBindStmtContext *context) {
   visit_should_be<int>(context->x, at(*context)) | [this](const int idx) {
     highlight_binding = idx;
+  };
+
+  return no_value{at(*context)}; // no reasonable return value possible
+}
+
+std::any map_visitor::visitAddColliderStmt(mapParser::AddColliderStmtContext *context) {
+  visit_should_be<render_ref>(context->x, at(*context)) | [this, context](const render_ref ref) {
+    visit_should_be<collider_ref>(context->coll, at(*context)) | [ref](const collider_ref coll) {
+      ref->coll = coll;
+    };
+  };
+
+  return no_value{at(*context)}; // no reasonable return value possible
+}
+
+std::any map_visitor::visitAddInstancedColliderStmt(mapParser::AddInstancedColliderStmtContext *context) {
+  visit_should_be<instanced_render_ref>(context->x, at(*context)) | [this, context](const instanced_render_ref ref) {
+    visit_should_be<instanced_collider_ref>(context->coll, at(*context)) | [ref](const instanced_collider_ref coll) {
+      ref->coll = coll;
+    };
   };
 
   return no_value{at(*context)}; // no reasonable return value possible

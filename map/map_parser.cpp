@@ -52,6 +52,7 @@ map_desc map_desc::parse_from(const std::string &asset) {
 
   return {
     .scene = {visitor.spawned.begin(), visitor.spawned.end()},
+    .scene_instances = { visitor.spawned_instances.begin(), visitor.spawned_instances.end() },
     .requires_highlight = std::move(visitor.requires_highlight),
     .highlight_binding = std::move(visitor.highlight_binding)
   };
