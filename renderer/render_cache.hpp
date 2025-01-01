@@ -7,6 +7,7 @@
 
 #include <vector>
 
+#include "util.hpp"
 #include "camera.hpp"
 #include "window.hpp"
 #include "object.hpp"
@@ -40,14 +41,23 @@ using shader_ref = t_ref<shader>;
 using texture_ref = t_ref<texture>;
 using collider_ref = t_ref<collider>;
 using instanced_collider_ref = t_ref<instanced_collider>;
+
 class render_cache;
 }
 
 template <typename T>
-struct std::hash<openvtt::renderer::t_ref<T>> {
+struct std::hash<openvtt::renderer::t_ref<T>> { // NOLINT(*-dcl58-cpp) // false positive
   static size_t operator()(const openvtt::renderer::t_ref<T> &ref) noexcept {
     return std::hash<size_t>{}(ref.raw());
   }
+};
+
+template <typename T>
+struct std::formatter<openvtt::renderer::t_ref<T>, char> { // NOLINT(*-dcl58-cpp) // false positive
+  using type = openvtt::renderer::t_ref<T>;
+  std::formatter<std::string> base{};
+  template <typename PC> constexpr auto parse(PC &ctx) { return base.parse(ctx); }
+  template <typename FC> constexpr auto format(const type &ref, FC &ctx) { return base.format(ref.desc(), ctx); }
 };
 
 #include "renderable.hpp"
