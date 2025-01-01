@@ -19,7 +19,7 @@ struct lexer_error_listener final : antlr4::BaseErrorListener {
       const size_t charPositionInLine, const std::string &msg, std::exception_ptr e
   ) override {
     renderer::log<renderer::log_type::WARNING>("map_lexer",
-      std::format("{}:{}:{}: {} (on token {})", file, line, charPositionInLine, msg, offendingSymbol->getText())
+      std::format("{}:{}:{}: {} (on token '{}')", file, line, charPositionInLine, msg, offendingSymbol->getText())
     );
     std::cerr << "Lexer error at line " << line << ":" << charPositionInLine << " " << msg << std::endl;
   }
@@ -35,7 +35,7 @@ struct parser_error_listener final : antlr4::BaseErrorListener {
       const size_t charPositionInLine, const std::string &msg, std::exception_ptr e
   ) override {
     renderer::log<renderer::log_type::WARNING>("map_parser",
-      std::format("{}:{}:{}: {} (on token {})", file, line, charPositionInLine, msg, offendingSymbol->getText())
+      std::format("{}:{}:{}: {} (on token '{}')", file, line, charPositionInLine, msg, offendingSymbol->getText())
     );
     std::cerr << "Parser error at line " << line << ":" << charPositionInLine << " " << msg << std::endl;
   }

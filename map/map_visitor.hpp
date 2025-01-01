@@ -157,19 +157,19 @@ struct map_visitor final : mapVisitor {
 
   std::any visitObjectsSpec(mapParser::ObjectsSpecContext *context) override;
 
-  std::any visitLoadObject(mapParser::LoadObjectContext *context) override;
-
-  std::any visitLoadInstancedObject(mapParser::LoadInstancedObjectContext *context) override;
-
-  std::any visitLoadShader(mapParser::LoadShaderContext *context) override;
-
-  std::any visitLoadTexture(mapParser::LoadTextureContext *context) override;
-
-  std::any visitLoadCollider(mapParser::LoadColliderContext *context) override;
-
-  std::any visitLoadInstancedCollider(mapParser::LoadInstancedColliderContext *context) override;
-
-  std::any visitLoadTransform(mapParser::LoadTransformContext *context) override;
+  // std::any visitLoadObject(mapParser::LoadObjectContext *context) override;
+  //
+  // std::any visitLoadInstancedObject(mapParser::LoadInstancedObjectContext *context) override;
+  //
+  // std::any visitLoadShader(mapParser::LoadShaderContext *context) override;
+  //
+  // std::any visitLoadTexture(mapParser::LoadTextureContext *context) override;
+  //
+  // std::any visitLoadCollider(mapParser::LoadColliderContext *context) override;
+  //
+  // std::any visitLoadInstancedCollider(mapParser::LoadInstancedColliderContext *context) override;
+  //
+  // std::any visitLoadTransform(mapParser::LoadTransformContext *context) override;
 
   std::any visitEmptyListExpr(mapParser::EmptyListExprContext *context) override;
 
@@ -189,27 +189,29 @@ struct map_visitor final : mapVisitor {
 
   std::any visitListExpr(mapParser::ListExprContext *context) override;
 
-  std::any visitLoadExpr(mapParser::LoadExprContext *context) override;
+  // std::any visitLoadExpr(mapParser::LoadExprContext *context) override;
 
   std::any visitAssignExpr(mapParser::AssignExprContext *context) override;
 
-  std::any visitSpawnExpr(mapParser::SpawnExprContext *context) override;
+  std::any visitFuncExpr(mapParser::FuncExprContext *context) override;
 
-  std::any visitInstancedSpawnExpr(mapParser::InstancedSpawnExprContext *context) override;
-
-  std::any visitTransformExpr(mapParser::TransformExprContext *context) override;
+  // std::any visitSpawnExpr(mapParser::SpawnExprContext *context) override;
+  //
+  // std::any visitInstancedSpawnExpr(mapParser::InstancedSpawnExprContext *context) override;
+  //
+  // std::any visitTransformStmt(mapParser::TransformStmtContext *context) override;
 
   std::any visitExprStmt(mapParser::ExprStmtContext *context) override;
 
-  std::any visitEnableHighlightStmt(mapParser::EnableHighlightStmtContext *context) override;
-
-  std::any visitEnableInstancedHighlightStmt(mapParser::EnableInstancedHighlightStmtContext *context) override;
-
-  std::any visitHighlightBindStmt(mapParser::HighlightBindStmtContext *context) override;
-
-  std::any visitAddColliderStmt(mapParser::AddColliderStmtContext *context) override;
-
-  std::any visitAddInstancedColliderStmt(mapParser::AddInstancedColliderStmtContext *context) override;
+  // std::any visitEnableHighlightStmt(mapParser::EnableHighlightStmtContext *context) override;
+  //
+  // std::any visitEnableInstancedHighlightStmt(mapParser::EnableInstancedHighlightStmtContext *context) override;
+  //
+  // std::any visitHighlightBindStmt(mapParser::HighlightBindStmtContext *context) override;
+  //
+  // std::any visitAddColliderStmt(mapParser::AddColliderStmtContext *context) override;
+  //
+  // std::any visitAddInstancedColliderStmt(mapParser::AddInstancedColliderStmtContext *context) override;
 
   ~map_visitor() override = default;
 };

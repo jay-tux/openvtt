@@ -1,44 +1,49 @@
-voxels(100, 100) {
-    // TODO
+voxels(3, 3) {
+    // background = (188,183,153);
+    // spots = (49,17,10);
+    // palette = mix(background, spots, 1);
+    // default {
+    //     all(palette);
+    // }
 }
 
 objects {
-    highlight_bind(15);
+    @highlight_bind(15);
 
-    tex = texture("plasma");
+    tex = @texture("plasma");
 
     monkey_ts = [
-        transform((-0.69, 1.35, -2.34), (-39.5963, 67.4245, 351.406), (0.18, 0.18, 0.18)),
-        transform((2.01, -1.02, 0.36), (-99.8201, 205.545, 278.186), (0.418, 0.418, 0.418)),
-        transform((-1.68, 2.67, -1.35), (185.595, 181.593, -249.356), (0.28, 0.28, 0.28)),
-        transform((0.36, -2.01, 1.02), (144.008, -328.609, -29.6245), (0.37, 0.37, 0.37)),
-        transform((-2.34, 0.69, -1.68), (301.552, -149.095, -128.208), (0.64, 0.64, 0.64))
+        @transform((-0.69, 1.35, -2.34), (-39.5963, 67.4245, 351.406), (0.18, 0.18, 0.18)),
+        @transform((2.01, -1.02, 0.36), (-99.8201, 205.545, 278.186), (0.418, 0.418, 0.418)),
+        @transform((-1.68, 2.67, -1.35), (185.595, 181.593, -249.356), (0.28, 0.28, 0.28)),
+        @transform((0.36, -2.01, 1.02), (144.008, -328.609, -29.6245), (0.37, 0.37, 0.37)),
+        @transform((-2.34, 0.69, -1.68), (301.552, -149.095, -128.208), (0.64, 0.64, 0.64))
     ];
 
-    suzanne = spawn(
-        "suzanne", mesh = object("suzanne"),
-        phong = shader("phong", "phong"),
-        phong_uniforms = [(4, tex), (5, tex)]
+    suzanne = @spawn(
+        "suzanne", mesh = @object("suzanne"),
+        phong = @shader("phong", "phong"),
+        phong_tex_map = [(4, tex), (5, tex)]
     );
 
-    monkeys = spawn*(
+    monkeys = @spawn*(
         "monkey_collection",
-        object*("suzanne", monkey_ts),
-        phong_i = shader("phong_instanced", "phong_instanced"),
-        phong_uniforms
+        @object*("suzanne", monkey_ts),
+        phong_i = @shader("phong_instanced", "phong_instanced"),
+        phong_tex_map
     );
 
     map_uniform = "highlight_map";
     target_uniform = "is_highlighted";
-    enable_highlight(phong, map_uniform, target_uniform);
-    enable_highlight*(phong_i, map_uniform, target_uniform, "highlighted_instance");
+    @enable_highlight(phong, map_uniform, target_uniform);
+    @enable_highlight*(phong_i, map_uniform, target_uniform, "highlighted_instance");
 
-    transform_obj(
+    @transform_obj(
         suzanne,
         pos = (0, 0.5, 0), rot = (0, 0, 0),
         scale = (0.5, 0.5, 0.5)
     );
 
-    add_collider(suzanne, monkey = collider("suzanne_collider"));
-    add_collider*(monkeys, collider*("suzanne_collider", monkey_ts));
+    @add_collider(suzanne, monkey = @collider("suzanne_collider"));
+    @add_collider*(monkeys, @collider*("suzanne_collider", monkey_ts));
 }
