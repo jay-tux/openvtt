@@ -101,6 +101,7 @@ public:
     : instanced_object(std::move(render_object(vs, index)), models) {}
   constexpr instanced_object(instanced_object &&other) noexcept : render_object(std::move(other)) {
     std::swap(model_vbo, other.model_vbo);
+    std::swap(model_inv_t_vbo, other.model_inv_t_vbo);
     std::swap(instances, other.instances);
   }
 

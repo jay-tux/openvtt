@@ -25,11 +25,13 @@ objects {
         "monkey_collection",
         object*("suzanne", monkey_ts),
         phong_i = shader("phong_instanced", "phong_instanced"),
-        [(4, tex), (5, tex)]
+        phong_uniforms
     );
 
-    enable_highlight(phong, "highlight_map");
-    enable_highlight(phong_i, "highlight_map");
+    map_uniform = "highlight_map";
+    target_uniform = "is_highlighted";
+    enable_highlight(phong, map_uniform, target_uniform);
+    enable_highlight*(phong_i, map_uniform, target_uniform, "highlighted_instance");
 
     transform_obj(
         suzanne,

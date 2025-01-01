@@ -227,10 +227,34 @@ std::any map_visitor::visitExprStmt(mapParser::ExprStmtContext *context) {
 }
 
 std::any map_visitor::visitEnableHighlightStmt(mapParser::EnableHighlightStmtContext *context) {
-  visit_should_be<shader_ref>(context->x, at(*context)) | [this, context](const shader_ref sh) {
-    visit_should_be<std::string>(context->uniform, at(*context)) | [this, sh](const std::string &uniform) {
-      const auto uniform_idx = sh->loc_for(uniform);
-      requires_highlight[sh] = uniform_idx;
+  visit_maybe_value<shader_ref>(context->x, at(*context)) | [this, context](const shader_ref sh) {
+    visit_maybe_value<std::string>(context->uniform, at(*context)) | [this, context, sh](const std::string &uniform) {
+      visit_maybe_value<std::string>(context->toggle, at(*context)) | [this, sh, uniform](const std::string &toggle) {
+        log<log_type::DEBUG>("map_visitor", std::format("Shader ready for highlighting; uniform: {}, toggle: {}", uniform, toggle));
+        requires_highlight[sh] = {
+          .uniform_tex = sh->loc_for(uniform),
+          .uniform_highlight = sh->loc_for(toggle)
+        };
+      };
+    };
+  };
+
+  return no_value{at(*context)}; // no reasonable return value possible
+}
+
+std::any map_visitor::visitEnableInstancedHighlightStmt(mapParser::EnableInstancedHighlightStmtContext *context) {
+  visit_maybe_value<shader_ref>(context->x, at(*context)) | [this, context](const shader_ref sh) {
+    visit_maybe_value<std::string>(context->uniform, at(*context)) | [this, context, sh](const std::string &uniform) {
+      visit_maybe_value<std::string>(context->toggle, at(*context)) | [this, context, sh, uniform](const std::string &toggle) {
+        visit_maybe_value<std::string>(context->inst, at(*context)) | [this, sh, uniform, toggle](const std::string &inst) {
+          log<log_type::DEBUG>("map_visitor", std::format("Shader ready for highlighting; uniform: {}, toggle: {}, inst: {}", uniform, toggle, inst));
+          requires_instanced_highlight[sh] = {
+            .uniform_tex = sh->loc_for(uniform),
+            .uniform_highlight = sh->loc_for(toggle),
+            .uniform_instance_id = sh->loc_for(inst)
+          };
+        };
+      };
     };
   };
 
@@ -238,7 +262,7 @@ std::any map_visitor::visitEnableHighlightStmt(mapParser::EnableHighlightStmtCon
 }
 
 std::any map_visitor::visitHighlightBindStmt(mapParser::HighlightBindStmtContext *context) {
-  visit_should_be<int>(context->x, at(*context)) | [this](const int idx) {
+  visit_maybe_value<int>(context->x, at(*context)) | [this](const int idx) {
     highlight_binding = idx;
   };
 
@@ -246,8 +270,8 @@ std::any map_visitor::visitHighlightBindStmt(mapParser::HighlightBindStmtContext
 }
 
 std::any map_visitor::visitAddColliderStmt(mapParser::AddColliderStmtContext *context) {
-  visit_should_be<render_ref>(context->x, at(*context)) | [this, context](const render_ref ref) {
-    visit_should_be<collider_ref>(context->coll, at(*context)) | [ref](const collider_ref coll) {
+  visit_maybe_value<render_ref>(context->x, at(*context)) | [this, context](const render_ref ref) {
+    visit_maybe_value<collider_ref>(context->coll, at(*context)) | [ref](const collider_ref coll) {
       ref->coll = coll;
     };
   };
@@ -256,8 +280,8 @@ std::any map_visitor::visitAddColliderStmt(mapParser::AddColliderStmtContext *co
 }
 
 std::any map_visitor::visitAddInstancedColliderStmt(mapParser::AddInstancedColliderStmtContext *context) {
-  visit_should_be<instanced_render_ref>(context->x, at(*context)) | [this, context](const instanced_render_ref ref) {
-    visit_should_be<instanced_collider_ref>(context->coll, at(*context)) | [ref](const instanced_collider_ref coll) {
+  visit_maybe_value<instanced_render_ref>(context->x, at(*context)) | [this, context](const instanced_render_ref ref) {
+    visit_maybe_value<instanced_collider_ref>(context->coll, at(*context)) | [ref](const instanced_collider_ref coll) {
       ref->coll = coll;
     };
   };

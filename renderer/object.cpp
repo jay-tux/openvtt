@@ -148,9 +148,9 @@ instanced_object::instanced_object(render_object &&ro, const std::vector<glm::ma
   GL_genBuffers(1, &model_inv_t_vbo);
   GL_bindBuffer(GL_ARRAY_BUFFER, model_inv_t_vbo);
   GL_bufferData(GL_ARRAY_BUFFER, models.size() * sizeof(glm::mat4), model_inv_t, GL_STATIC_DRAW);
-  for (unsigned int i = 0; i < 3; i++) {
+  for (unsigned int i = 0; i < 4; i++) {
     GL_enableVertexAttribArray(7 + i);
-    GL_vertexAttribPointer(7 + i, 3, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), reinterpret_cast<void *>(sizeof(glm::vec4) * i));
+    GL_vertexAttribPointer(7 + i, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), reinterpret_cast<void *>(sizeof(glm::vec4) * i));
     GL_vertexAttribDivisor(7 + i, 1);
   }
 

@@ -134,7 +134,10 @@ int main(int argc, const char **argv) {
       highlighter::bind_highlight_tex(*map.highlight_binding);
 
       for (const auto &[s, idx] : map.requires_highlight) {
-        s->set_int(idx, *map.highlight_binding);
+        s->set_int(idx.uniform_tex, *map.highlight_binding);
+      }
+      for (const auto &[s, idx] : map.requires_instanced_highlight) {
+        s->set_int(idx.uniform_tex, *map.highlight_binding);
       }
     }
 

@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <mapVisitor.h>
 
+#include "map_parser.hpp"
 #include "object_cache.hpp"
 
 namespace openvtt::map {
@@ -24,7 +25,8 @@ struct map_visitor final : mapVisitor {
   object_cache cache {};
   std::unordered_set<renderer::render_ref> spawned{};
   std::unordered_set<renderer::instanced_render_ref> spawned_instances{};
-  std::unordered_map<renderer::shader_ref, int> requires_highlight{};
+  std::unordered_map<renderer::shader_ref, single_highlight> requires_highlight{};
+  std::unordered_map<renderer::shader_ref, instanced_highlight> requires_instanced_highlight{};
   std::optional<int> highlight_binding{};
 
   constexpr loc at(const antlr4::ParserRuleContext &ctx) const {
@@ -139,7 +141,7 @@ struct map_visitor final : mapVisitor {
   }
 
   std::optional<std::vector<value>> expect_n_args(antlr4::ParserRuleContext *c, const loc &at, const size_t n) {
-    const auto vec = visit_no_value<std::vector<value>>(c, at, "argument (value) list");
+    auto vec = visit_no_value<std::vector<value>>(c, at, "argument (value) list");
     if (vec.size() != n) {
       renderer::log<renderer::log_type::ERROR>("map_visitor",
         std::format("Expected {} arguments, but got {} at {}", n, vec.size(), this->at(*c).str())
@@ -200,6 +202,8 @@ struct map_visitor final : mapVisitor {
   std::any visitExprStmt(mapParser::ExprStmtContext *context) override;
 
   std::any visitEnableHighlightStmt(mapParser::EnableHighlightStmtContext *context) override;
+
+  std::any visitEnableInstancedHighlightStmt(mapParser::EnableInstancedHighlightStmtContext *context) override;
 
   std::any visitHighlightBindStmt(mapParser::HighlightBindStmtContext *context) override;
 

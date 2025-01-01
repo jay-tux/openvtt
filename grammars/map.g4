@@ -44,8 +44,10 @@ expr: x=IDENTIFIER                                  #idExpr
     ;
 
 stmt: e=expr ';'                                    #exprStmt
-    | 'enable_highlight' '(' x=expr ',' uniform=expr ')' ';'
+    | 'enable_highlight' '(' x=expr ',' uniform=expr ',' toggle=expr ')' ';'
                                                     #enableHighlightStmt
+    | 'enable_highlight' '*' '(' x=expr ',' uniform=expr ',' toggle=expr ',' inst=expr ')' ';'
+                                                    #enableInstancedHighlightStmt
     | 'highlight_bind' '(' x=expr ')' ';'           #highlightBindStmt
     | 'add_collider' '(' x=expr ',' coll=expr ')' ';'
                                                     #addColliderStmt
