@@ -153,7 +153,7 @@ render_cache::collision_res render_cache::mouse_over(const camera &cam) {
   std::optional<render_ref> res = std::nullopt;
   float t_dist = INFINITY;
   for (size_t i = 0; i < renderables.size(); i++) {
-    if (renderables[i].coll.has_value()) {
+    if (renderables[i].active && renderables[i].coll.has_value()) {
       const float d = (*renderables[i].coll)->ray_intersect(r, renderables[i].model());
 
       if (d < t_dist) {
@@ -167,7 +167,7 @@ render_cache::collision_res render_cache::mouse_over(const camera &cam) {
   std::optional<instanced_render_ref> inst_res = std::nullopt;
   size_t inst_idx = 0;
   for (size_t i = 0; i < instanced_renderables.size(); i++) {
-    if (instanced_renderables[i].coll.has_value()) {
+    if (instanced_renderables[i].active && instanced_renderables[i].coll.has_value()) {
       // ReSharper disable once CppTooWideScopeInitStatement
       const auto [d, idx] = (*instanced_renderables[i].coll)->ray_intersect_any(r);
 
