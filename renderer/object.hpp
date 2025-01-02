@@ -151,6 +151,32 @@ private:
   unsigned int model_inv_t_vbo = 0; //!< The additional VBO for the inverse-transpose of the model matrices.
   size_t instances = -1ul; //!< The number of instances.
 };
+
+class voxel_group {
+public:
+  voxel_group(glm::vec3 background_colors[9], glm::vec3 spot_colors[9], const float factors[9], const std::vector<glm::vec2> &centers, const glm::mat4x3 &tiered_perlin);
+  voxel_group(const voxel_group &other) = delete;
+  constexpr voxel_group(voxel_group &&other) noexcept {
+    std::swap(vbo, other.vbo);
+    std::swap(ebo, other.ebo);
+    std::swap(vao, other.vao);
+    std::swap(instances, other.instances);
+    std::swap(tiered_perlin, other.tiered_perlin);
+  }
+  void draw(const shader &s);
+  voxel_group &operator=(const voxel_group &other) = delete;
+  voxel_group &operator=(voxel_group &&other) = delete;
+
+  ~voxel_group();
+
+  glm::mat4x3 tiered_perlin{};
+private:
+  unsigned int vbo = 0;
+  unsigned int center_vbo = 0;
+  unsigned int ebo = 0;
+  unsigned int vao = 0;
+  size_t instances = 0;
+};
 }
 
 #endif //OBJECT_HPP

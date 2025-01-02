@@ -1,10 +1,13 @@
-voxels(3, 3) {
-    // background = (188,183,153);
-    // spots = (49,17,10);
-    // palette = mix(background, spots, 1);
-    // default {
-    //     all(palette);
-    // }
+voxels(3, 3, 25) {
+    background = (188,183,153);
+    spots = (49,17,10);
+    palette = @mix(background, spots, 1);
+    octaves = [(1, 1), (0.5, 2), (0.25, 4), (0.125, 8)];
+    default {
+        @all(palette);
+        @perlin(octaves);
+        @seed(0, -0.4512, 0.5701, 0.0519);
+    }
 }
 
 objects {

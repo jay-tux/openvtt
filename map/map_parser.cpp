@@ -42,12 +42,49 @@ map_desc map_desc::parse_from(const std::string &asset) {
   visitor.file = path;
   visitor.visit(parser.program());
 
-  if (!visitor.requires_highlight.empty() && !visitor.highlight_binding.has_value()) {
-    log<log_type::ERROR>("map_parser", "Highlighting requires a binding index, but none was provided. Ignoring all highlight bindings.");
-    visitor.requires_highlight.clear();
+  if (visitor.highlight_binding.has_value()) {
+    if (visitor.requires_highlight.empty() && visitor.requires_instanced_highlight.empty()) {
+      log<log_type::WARNING>("map_parser", "Highlighting binding index provided, but no shaders require highlighting.");
+    }
   }
-  else if (visitor.requires_highlight.empty() && visitor.highlight_binding.has_value()) {
+  else if(!visitor.requires_highlight.empty() || !visitor.requires_instanced_highlight.empty()) {
     log<log_type::WARNING>("map_parser", "Highlighting binding index provided, but no shaders require highlighting.");
+    visitor.requires_highlight.clear();
+    visitor.requires_instanced_highlight.clear();
+  }
+
+  std::vector<glm::vec2> defaulted;
+  std::vector<voxel_ref> voxels;
+  const auto [w, h] = visitor.map_size;
+  for (int i = 0; i < w; i++) {
+    for (int j = 0; j < h; j++) {
+      if (!visitor.set_voxels.contains({i, j})) defaulted.emplace_back(i, j);
+    }
+  }
+
+  voxels.reserve(visitor.voxels.size() + !defaulted.empty());
+  if (!defaulted.empty()) {
+    if (!visitor.default_set) {
+      log<log_type::WARNING>("map_parser", "Default voxels required, but no default voxel set. Did you forget to use `default {}` in your map?");
+    }
+
+    auto [back, spot, fac, alpha, beta, delta] = visitor.default_voxel;
+    glm::mat4x3 tiers(0.0f);
+    for (int i = 0; i < 4; i++) {
+      tiers[i] = glm::vec3(alpha[i], beta[i], delta[i]);
+    }
+
+    voxels.push_back(render_cache::construct<voxel_group>(back, spot, fac, defaulted, tiers));
+  }
+
+  for (auto &[vox, pos] : visitor.voxels) {
+    auto [back, spot, fac, alpha, beta, delta] = vox;
+    glm::mat4x3 tiers(0.0f);
+    for (int i = 0; i < 4; i++) {
+      tiers[i] = glm::vec3(alpha[i], beta[i], delta[i]);
+    }
+
+    voxels.push_back(render_cache::construct<voxel_group>(back, spot, fac, pos, tiers));
   }
 
   return {
@@ -55,6 +92,8 @@ map_desc map_desc::parse_from(const std::string &asset) {
     .scene_instances = { visitor.spawned_instances.begin(), visitor.spawned_instances.end() },
     .requires_highlight = std::move(visitor.requires_highlight),
     .requires_instanced_highlight = std::move(visitor.requires_instanced_highlight),
-    .highlight_binding = visitor.highlight_binding
+    .highlight_binding = visitor.highlight_binding,
+    .voxels = std::move(voxels),
+    .perlin_scale = visitor.perlin_scale
   };
 }

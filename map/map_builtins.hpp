@@ -21,6 +21,9 @@ inline or_error<std::vector<value>> n_args(const std::vector<value> &args, const
 template <valid_value T>
 inline or_error<T> type_check(const value &v) {
   if (v.is<T>()) return right(v.as<T>());
+  if constexpr(std::same_as<T, float>) {
+    if (v.is<int>()) return right(static_cast<float>(v.as<int>()));
+  }
   return left(std::format("Expected a value of type {}, but got {} at {}.", type_name<T>(), v.type_name(), v.pos().str()));
 }
 
@@ -47,7 +50,7 @@ inline or_error<std::vector<T>> type_check_vector(const std::vector<value> &vs) 
 
 template <std::invocable<const value_pair &> F>
 requires(is_either<res_t<F, const value_pair &>>)
-inline or_error<std::vector<typename either_traits<res_t<F, const value_pair &>>::right_t>> type_check_vector(const std::vector<value> &vs, F &&f) {
+inline or_error<std::vector<typename either_traits<res_t<F, const value_pair &>>::right_t>> type_check_pair_vector(const std::vector<value> &vs, F &&f) {
   using mapped_t = typename either_traits<res_t<F, const value_pair &>>::right_t;
   std::vector<mapped_t> res;
   res.reserve(vs.size());
@@ -86,9 +89,9 @@ value handle(const or_error<T> &res, const loc &pos, const T &backup = {}) {
 }
 
 template <typename T>
-no_value handle_no_value(const or_error<T> &res, const loc &pos) {
+value handle_no_value(const or_error<T> &res, const loc &pos) {
   map_left(res, [](const std::string &err) { renderer::log<renderer::log_type::WARNING>("map_loader", err); return std::monostate{}; });
-  return no_value{pos};
+  return value{std::monostate{}, pos};
 }
 
 inline value invoke_object(const std::vector<value> &args, map_visitor &, const loc &pos) {
@@ -178,7 +181,7 @@ inline value invoke_spawn(const std::vector<value> &args, map_visitor &cache, co
       // check textures
       const auto &[name, obj, sh, textures] = a;
 
-      return type_check_vector(textures, [](const value_pair &vp) {
+      return type_check_pair_vector(textures, [](const value_pair &vp) {
         return type_check_multi<int, renderer::texture_ref>({vp.first(), vp.second()}) |
           [](const std::pair<int, renderer::texture_ref> &p) { return std::pair{static_cast<unsigned int>(p.first), p.second}; };
       }) |
@@ -201,7 +204,7 @@ inline value invoke_spawn_star(const std::vector<value> &args, map_visitor &cach
     [](const auto &a) -> or_error<renderer::instanced_render_ref> {
       // check textures
       const auto &[asset, obj, sh, textures] = a;
-      return type_check_vector(textures, [](const value_pair &vp) {
+      return type_check_pair_vector(textures, [](const value_pair &vp) {
         return type_check_multi<int, renderer::texture_ref>({vp.first(), vp.second()}) |
           [](const std::pair<int, renderer::texture_ref> &p) { return std::pair{static_cast<unsigned int>(p.first), p.second}; };
       }) |
@@ -217,7 +220,7 @@ inline value invoke_spawn_star(const std::vector<value> &args, map_visitor &cach
   );
 }
 
-inline no_value invoke_transform_obj(const std::vector<value> &args, map_visitor &, const loc &pos) {
+inline value invoke_transform_obj(const std::vector<value> &args, map_visitor &, const loc &pos) {
   return handle_no_value(
     ready_args<renderer::render_ref, glm::vec3, glm::vec3, glm::vec3>(args, "@transform_obj", pos) |
     []<typename ... Ts>(const std::tuple<Ts...> &tup) {
@@ -230,7 +233,7 @@ inline no_value invoke_transform_obj(const std::vector<value> &args, map_visitor
   );
 }
 
-inline no_value invoke_enable_highlight(const std::vector<value> &args, map_visitor &cache, const loc &pos) {
+inline value invoke_enable_highlight(const std::vector<value> &args, map_visitor &cache, const loc &pos) {
   return handle_no_value(
     ready_args<renderer::shader_ref, std::string, std::string>(args, "@enable_highlight", pos) |
     [&cache]<typename ... Ts>(const std::tuple<Ts...> &tup) {
@@ -243,7 +246,7 @@ inline no_value invoke_enable_highlight(const std::vector<value> &args, map_visi
   );
 }
 
-inline no_value invoke_enable_highlight_star(const std::vector<value> &args, map_visitor &cache, const loc &pos) {
+inline value invoke_enable_highlight_star(const std::vector<value> &args, map_visitor &cache, const loc &pos) {
   return handle_no_value(
     ready_args<renderer::shader_ref, std::string, std::string, std::string>(args, "@enable_highlight*", pos) |
     [&cache]<typename ... Ts>(const std::tuple<Ts...> &tup) {
@@ -256,7 +259,7 @@ inline no_value invoke_enable_highlight_star(const std::vector<value> &args, map
   );
 }
 
-inline no_value invoke_highlight_bind(const std::vector<value> &args, map_visitor &cache, const loc &pos) {
+inline value invoke_highlight_bind(const std::vector<value> &args, map_visitor &cache, const loc &pos) {
   return handle_no_value(
     ready_arg<int>(args, "@highlight_bind", pos) |
     [&cache](const int idx) {
@@ -268,7 +271,7 @@ inline no_value invoke_highlight_bind(const std::vector<value> &args, map_visito
   );
 }
 
-inline no_value invoke_add_collider(const std::vector<value> &args, map_visitor &, const loc &pos) {
+inline value invoke_add_collider(const std::vector<value> &args, map_visitor &, const loc &pos) {
   return handle_no_value(
     ready_args<renderer::render_ref, renderer::collider_ref>(args, "@add_collider", pos) |
     []<typename ... Ts>(const std::tuple<Ts...> &tup) {
@@ -281,7 +284,7 @@ inline no_value invoke_add_collider(const std::vector<value> &args, map_visitor 
   );
 }
 
-inline no_value invoke_add_collider_star(const std::vector<value> &args, map_visitor &, const loc &pos) {
+inline value invoke_add_collider_star(const std::vector<value> &args, map_visitor &, const loc &pos) {
   return handle_no_value(
     ready_args<renderer::instanced_render_ref, renderer::instanced_collider_ref>(args, "@add_collider*", pos) |
     []<typename ... Ts>(const std::tuple<Ts...> &tup) {
@@ -294,13 +297,78 @@ inline no_value invoke_add_collider_star(const std::vector<value> &args, map_vis
   );
 }
 
+inline value invoke_mix(const std::vector<value> &args, map_visitor &, const loc &pos) {
+  return handle(
+    ready_args<glm::vec3, glm::vec3, float>(args, "@mix", pos),
+    pos, voxel_corner{}
+  );
+}
+
+inline value invoke_all(const std::vector<value> &args, map_visitor &cache, const loc &pos) {
+  return handle(
+    ready_arg<voxel_corner>(args, "@all", pos) |
+    [&cache](const voxel_corner &crn) {
+      const auto &[back, spot, fac] = crn;
+      for (int i = 0; i < 9; i++) {
+        cache.voxel_in_progress.back[i] = back;
+        cache.voxel_in_progress.spot[i] = spot;
+        cache.voxel_in_progress.fac[i] = fac;
+      }
+
+      return voxel_desc{crn, crn, crn, crn, crn, crn, crn, crn, crn};
+    },
+
+    pos, voxel_desc{}
+  );
+}
+
+inline value invoke_perlin(const std::vector<value> &args, map_visitor &cache, const loc &pos) {
+  return handle_no_value(
+    ready_arg<std::vector<value>>(args, "@perlin", pos) >>
+    [](const std::vector<value> &vs) {
+      return type_check_pair_vector(vs, [](const value_pair &vp) {
+        return type_check_multi<float, float>({vp.first(), vp.second()});
+      });
+    } >>
+    [&pos](const std::vector<std::tuple<float, float>> &tups) -> or_error<std::vector<std::tuple<float, float>>> {
+      if (tups.size() == 4) return right(tups);
+      return left(std::format("@perlin requires 4 sets of arguments, {} given at {}.", tups.size(), pos.str()));
+    } |
+    [&cache](const std::vector<std::tuple<float, float>> &tups) {
+      for (int i = 0; i < 4; i++) {
+        cache.voxel_in_progress.alpha[i] = std::get<0>(tups[i]);
+        cache.voxel_in_progress.beta[i] = std::get<1>(tups[i]);
+      }
+      return std::monostate{};
+    },
+
+    pos
+  );
+}
+
+inline value invoke_seed(const std::vector<value> &args, map_visitor &cache, const loc &pos) {
+  return handle_no_value(
+    ready_args<float, float, float, float>(args, "@seed", pos) |
+    [&cache](const std::tuple<float, float, float, float> &tup) {
+      cache.voxel_in_progress.delta[0] = std::get<0>(tup);
+      cache.voxel_in_progress.delta[1] = std::get<1>(tup);
+      cache.voxel_in_progress.delta[2] = std::get<2>(tup);
+      cache.voxel_in_progress.delta[3] = std::get<3>(tup);
+      return std::monostate{};
+    },
+
+    pos
+  );
+}
+
 enum struct builtin {
   LD_OBJECT, LD_OBJECT_STAR, LD_SHADER, LD_TEXTURE, LD_COLLIDER, LD_COLLIDER_STAR, LD_TRANSFORM,
   SPAWN, SPAWN_STAR, TRANSFORM_OBJ, ENABLE_HIGHLIGHT, ENABLE_HIGHLIGHT_STAR, HIGHLIGHT_BIND,
-  ADD_COLLIDER, ADD_COLLIDER_STAR
+  ADD_COLLIDER, ADD_COLLIDER_STAR,
+  MIX, ALL, PERLIN, SEED
 };
 
-inline std::any invoke_builtin(const std::string &name, const std::vector<value> &args, map_visitor &cache, const loc &pos) {
+inline value invoke_builtin(const std::string &name, const std::vector<value> &args, map_visitor &cache, const loc &pos) {
   using enum builtin;
   const static std::unordered_map<std::string, builtin> builtins {
     {"@object", LD_OBJECT}, {"@object*", LD_OBJECT_STAR}, {"@shader", LD_SHADER}, {"@texture", LD_TEXTURE},
@@ -308,13 +376,14 @@ inline std::any invoke_builtin(const std::string &name, const std::vector<value>
     {"@spawn", SPAWN}, {"@spawn*", SPAWN_STAR}, {"@transform_obj", TRANSFORM_OBJ},
     {"@enable_highlight", ENABLE_HIGHLIGHT}, {"@enable_highlight*", ENABLE_HIGHLIGHT_STAR},
     {"@highlight_bind", HIGHLIGHT_BIND},
-    {"@add_collider", ADD_COLLIDER}, {"@add_collider*", ADD_COLLIDER_STAR}
+    {"@add_collider", ADD_COLLIDER}, {"@add_collider*", ADD_COLLIDER_STAR},
+    {"@mix", MIX}, {"@all", ALL}, {"@perlin", PERLIN}, {"@seed", SEED}
   };
 
   const auto it = builtins.find(name);
   if (it == builtins.end()) {
     renderer::log<renderer::log_type::WARNING>("map_loader", std::format("Unknown builtin function {} at {}.", name, pos.str()));
-    return no_value{pos};
+    return value{std::monostate{}, pos};
   }
 
   switch (it->second) {
@@ -333,8 +402,12 @@ inline std::any invoke_builtin(const std::string &name, const std::vector<value>
     case HIGHLIGHT_BIND: return invoke_highlight_bind(args, cache, pos);
     case ADD_COLLIDER: return invoke_add_collider(args, cache, pos);
     case ADD_COLLIDER_STAR: return invoke_add_collider_star(args, cache, pos);
+    case MIX: return invoke_mix(args, cache, pos);
+    case ALL: return invoke_all(args, cache, pos);
+    case PERLIN: return invoke_perlin(args, cache, pos);
+    case SEED: return invoke_seed(args, cache, pos);
 
-    default: std::unreachable();
+    default: OPENVTT_UNREACHABLE;
   }
 }
 }

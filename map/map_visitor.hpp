@@ -7,9 +7,19 @@
 
 #include <unordered_set>
 #include <mapVisitor.h>
+#include <random>
 
 #include "map_parser.hpp"
 #include "object_cache.hpp"
+
+template <>
+struct std::hash<std::pair<int, int>> {
+  std::size_t operator()(const std::pair<int, int> &p) const noexcept {
+    const int both[2] { p.first, p.second };
+    static_assert(sizeof(both) == sizeof(size_t));
+    return std::bit_cast<size_t>(both);
+  }
+};
 
 namespace openvtt::map {
 struct identifier {
@@ -20,14 +30,46 @@ struct no_value {
   loc at;
 };
 
+struct voxel {
+  static inline std::mt19937 gen{std::random_device{}()};
+  static inline std::uniform_real_distribution<float> dist{-1.0f, 1.0f};
+
+  glm::vec3 back[9];
+  glm::vec3 spot[9];
+  float fac[9];
+  float alpha[4] { 1, 0, 0, 0 };
+  float beta[4] { 1, 0, 0, 0 };
+  float delta[4] { dist(gen), dist(gen), dist(gen), dist(gen) };
+  // Tiered noise: (\Sum_i alpha_i * perlin(beta_i * x + delta_i)) / (\Sum_i alpha_i)
+};
+
 struct map_visitor final : mapVisitor {
   std::string file;
-  object_cache cache {};
+  std::vector<object_cache> context_stack{};
   std::unordered_set<renderer::render_ref> spawned{};
   std::unordered_set<renderer::instanced_render_ref> spawned_instances{};
   std::unordered_map<renderer::shader_ref, single_highlight> requires_highlight{};
   std::unordered_map<renderer::shader_ref, instanced_highlight> requires_instanced_highlight{};
   std::optional<int> highlight_binding{};
+  voxel default_voxel{};
+  std::pair<int, int> map_size;
+  float perlin_scale;
+  std::unordered_map<std::pair<int, int>, size_t> set_voxels{};
+  std::vector<std::pair<voxel, std::vector<glm::vec2>>> voxels{};
+  voxel voxel_in_progress{};
+  bool default_set = false;
+
+  constexpr value search_stack(const std::string &name, const loc &at) const {
+    for (const auto &ctx : context_stack) {
+      if (const auto v = ctx.lookup_var_maybe(name); v.has_value())
+        return *v;
+    }
+
+    renderer::log<renderer::log_type::ERROR>("object_cache",
+      std::format("Variable {} does not exist at {}", name, at.str())
+    );
+    return value{};
+  }
 
   constexpr loc at(const antlr4::ParserRuleContext &ctx) const {
     return {ctx, file};
@@ -82,7 +124,7 @@ struct map_visitor final : mapVisitor {
     const auto *ptr = std::any_cast<value>(&node);
     if (ptr == nullptr) {
       if (const auto *ptr2 = std::any_cast<identifier>(&node); ptr2 != nullptr) {
-        return cache.lookup_var(ptr2->name, at);
+        return search_stack(ptr2->name, at);
       }
 
       if (const auto *ptr2 = std::any_cast<no_value>(&node); ptr2 != nullptr) {
@@ -105,7 +147,7 @@ struct map_visitor final : mapVisitor {
     const auto *ptr = std::any_cast<value>(&node);
     if (ptr == nullptr) {
       if (const auto *ptr2 = std::any_cast<identifier>(&node); ptr2 != nullptr) {
-        return cache.lookup_var(ptr2->name, at);
+        return search_stack(ptr2->name, at);
       }
       renderer::log<renderer::log_type::ERROR>("map_visitor", std::format("Expected value at {}", at.str()));
       return value{};
@@ -157,20 +199,6 @@ struct map_visitor final : mapVisitor {
 
   std::any visitObjectsSpec(mapParser::ObjectsSpecContext *context) override;
 
-  // std::any visitLoadObject(mapParser::LoadObjectContext *context) override;
-  //
-  // std::any visitLoadInstancedObject(mapParser::LoadInstancedObjectContext *context) override;
-  //
-  // std::any visitLoadShader(mapParser::LoadShaderContext *context) override;
-  //
-  // std::any visitLoadTexture(mapParser::LoadTextureContext *context) override;
-  //
-  // std::any visitLoadCollider(mapParser::LoadColliderContext *context) override;
-  //
-  // std::any visitLoadInstancedCollider(mapParser::LoadInstancedColliderContext *context) override;
-  //
-  // std::any visitLoadTransform(mapParser::LoadTransformContext *context) override;
-
   std::any visitEmptyListExpr(mapParser::EmptyListExprContext *context) override;
 
   std::any visitExprList(mapParser::ExprListContext *context) override;
@@ -189,29 +217,17 @@ struct map_visitor final : mapVisitor {
 
   std::any visitListExpr(mapParser::ListExprContext *context) override;
 
-  // std::any visitLoadExpr(mapParser::LoadExprContext *context) override;
-
   std::any visitAssignExpr(mapParser::AssignExprContext *context) override;
 
   std::any visitFuncExpr(mapParser::FuncExprContext *context) override;
 
-  // std::any visitSpawnExpr(mapParser::SpawnExprContext *context) override;
-  //
-  // std::any visitInstancedSpawnExpr(mapParser::InstancedSpawnExprContext *context) override;
-  //
-  // std::any visitTransformStmt(mapParser::TransformStmtContext *context) override;
-
   std::any visitExprStmt(mapParser::ExprStmtContext *context) override;
 
-  // std::any visitEnableHighlightStmt(mapParser::EnableHighlightStmtContext *context) override;
-  //
-  // std::any visitEnableInstancedHighlightStmt(mapParser::EnableInstancedHighlightStmtContext *context) override;
-  //
-  // std::any visitHighlightBindStmt(mapParser::HighlightBindStmtContext *context) override;
-  //
-  // std::any visitAddColliderStmt(mapParser::AddColliderStmtContext *context) override;
-  //
-  // std::any visitAddInstancedColliderStmt(mapParser::AddInstancedColliderStmtContext *context) override;
+  std::any visitVExprStmt(mapParser::VExprStmtContext *context) override;
+
+  std::any visitStmtBlock(mapParser::StmtBlockContext *context) override;
+
+  std::any visitDefaultBlock(mapParser::DefaultBlockContext *context) override;
 
   ~map_visitor() override = default;
 };

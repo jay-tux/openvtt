@@ -31,8 +31,8 @@ struct std::formatter<T[s], char> {
   template <typename PC> constexpr auto parse(PC &ctx) {
     return base_const.parse(ctx);
   }
-  template <typename FC> constexpr typename FC::iterator format(T (&arr)[s], FC &ctx) const {
-    return base_const.format(arr, ctx);
+  template <typename FC> constexpr typename FC::iterator format(const T (&arr)[s], FC &ctx) const {
+    return base_const.format(&arr[0], ctx);
   }
 };
 

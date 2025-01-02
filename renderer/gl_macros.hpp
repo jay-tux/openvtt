@@ -56,6 +56,7 @@ while(false)
 #define GL_uniform4fv(location, count, value) RAW_GL_MACRO((glUniform4fv(location, count, value)), "location={}, count={}, value={}", location, count, value)
 #define GL_uniformMatrix3fv(location, count, transpose, value) RAW_GL_MACRO((glUniformMatrix3fv(location, count, transpose, value)), "location={}, count={}, transpose={}, value={}", location, count, transpose, value)
 #define GL_uniformMatrix4fv(location, count, transpose, value) RAW_GL_MACRO((glUniformMatrix4fv(location, count, transpose, value)), "location={}, count={}, transpose={}, value={}", location, count, transpose, value)
+#define GL_uniformMatrix4x3fv(location, count, transpose, value) RAW_GL_MACRO((glUniformMatrix4x3fv(location, count, transpose, value)), "location={}, count={}, transpose={}, value={}", location, count, transpose, value)
 
 #define GL_clear(mask) RAW_GL_MACRO((glClear(mask)), "mask={}", mask)
 #define GL_polygonMode(face, mode) RAW_GL_MACRO((glPolygonMode(face, mode)), "face={}, mode={}", face, mode)

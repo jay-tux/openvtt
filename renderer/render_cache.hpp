@@ -37,6 +37,7 @@ constexpr T &operator*(const t_ref<T> &r);
 
 using object_ref = t_ref<render_object>;
 using instanced_object_ref = t_ref<instanced_object>;
+using voxel_ref = t_ref<voxel_group>;
 using shader_ref = t_ref<shader>;
 using texture_ref = t_ref<texture>;
 using collider_ref = t_ref<collider>;
@@ -211,9 +212,10 @@ private:
     else if constexpr(type_traits::cvr_same<T, instanced_renderable>) return instanced_renderables;
     else if constexpr(type_traits::cvr_same<T, collider>) return colliders;
     else if constexpr(type_traits::cvr_same<T, instanced_collider>) return instanced_colliders;
+    else if constexpr(type_traits::cvr_same<T, voxel_group>) return voxels;
     else {
       static_assert(type_traits::invalid<T>, "Type not supported in cache.");
-      std::unreachable();
+      OPENVTT_UNREACHABLE;
     }
   }
 
@@ -226,6 +228,7 @@ private:
   static inline std::optional<shader_ref> collider_instanced_shader{}; //!< The instanced shader to render the colliders with, if any.
   static inline std::vector<render_object> objects{}; //!< The list of objects in the cache.
   static inline std::vector<instanced_object> instanced_objects{}; //!< The list of instanced objects in the cache.
+  static inline std::vector<voxel_group> voxels{}; //!< The list of voxel groups in the cache.
   static inline std::vector<shader> shaders{}; //!< The list of shaders in the cache.
   static inline std::vector<texture> textures{}; //!< The list of textures in the cache.
   static inline std::vector<renderable> renderables{}; //!< The list of renderables in the cache.

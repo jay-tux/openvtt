@@ -105,13 +105,17 @@ target_link_libraries(openvtt PRIVATE
         stb::stb
         antlr4_static
         map_spec
-        stdc++exp
 )
 
-if (OPENVTT_USE_STACK_TRACE)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message(STATUS "Debug build - using stack trace library")
     target_link_libraries(openvtt PRIVATE stdc++exp)
-    target_compile_definitions(openvtt PRIVATE OPENVTT_USE_STACK_TRACE)
-endif ()
+    if (OPENVTT_USE_STACK_TRACE)
+        target_compile_definitions(openvtt PRIVATE OPENVTT_USE_STACK_TRACE)
+    endif ()
+else()
+    message(STATUS "Release build - no stack trace library")
+endif()
 
 file(CREATE_LINK "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/assets" COPY_ON_ERROR SYMBOLIC)
 

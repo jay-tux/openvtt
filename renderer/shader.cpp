@@ -123,6 +123,9 @@ void shader::set_mat3(const unsigned int loc, const glm::mat3 &m) const {
 void shader::set_mat4(const unsigned int loc, const glm::mat4 &m) const {
   activate(); GL_uniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(m));
 }
+void shader::set_mat4x3(const unsigned int loc, const glm::mat4x3 &m) const {
+  activate(); GL_uniformMatrix4x3fv(loc, 1, GL_FALSE, glm::value_ptr(m));
+}
 
 void shader::activate() const {
   GL_useProgram(program);

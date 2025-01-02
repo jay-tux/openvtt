@@ -55,13 +55,18 @@ private:
   value *_second = nullptr;
 };
 
+using voxel_corner = std::tuple<glm::vec3, glm::vec3, float>;
+using voxel_desc = std::array<voxel_corner, 9>;
+
 template <typename T>
 concept valid_value = std::same_as<T, int> || std::same_as<T, float> || std::same_as<T, std::string> ||
   std::same_as<T, glm::vec3>  || std::same_as<T, glm::mat4> || std::same_as<T, renderer::object_ref> ||
   std::same_as<T, renderer::instanced_object_ref> || std::same_as<T, renderer::shader_ref> ||
   std::same_as<T, renderer::texture_ref> || std::same_as<T, renderer::collider_ref> ||
   std::same_as<T, renderer::instanced_collider_ref> || std::same_as<T, renderer::render_ref> ||
-  std::same_as<T, renderer::instanced_render_ref> || std::same_as<T, value_pair> || std::same_as<T, std::vector<value>>;
+  std::same_as<T, renderer::instanced_render_ref> || std::same_as<T, value_pair> ||
+  std::same_as<T, voxel_corner> || std::same_as<T, voxel_desc> ||
+  std::same_as<T, std::vector<value>> || std::same_as<T, std::monostate>;
 
 template <valid_value T>
 constexpr std::string type_name() {
@@ -79,8 +84,11 @@ constexpr std::string type_name() {
   if constexpr(std::same_as<T, renderer::render_ref>) return "renderable";
   if constexpr(std::same_as<T, renderer::instanced_render_ref>) return "instanced_renderable";
   if constexpr(std::same_as<T, value_pair>) return "pair";
+  if constexpr(std::same_as<T, voxel_corner>) return "voxel_corner";
+  if constexpr(std::same_as<T, voxel_desc>) return "voxel_desc";
   if constexpr(std::same_as<T, std::vector<value>>) return "list";
-  std::unreachable();
+  if constexpr(std::same_as<T, std::monostate>) return "void";
+  OPENVTT_UNREACHABLE;
 }
 
 class value {
@@ -111,12 +119,12 @@ public:
   [[nodiscard]] constexpr const loc &pos() const { return generated; }
 
 private:
-  // TODO: figure out font
   using var_t = std::variant<
     int, float, std::string, glm::vec3, glm::mat4,
     renderer::object_ref, renderer::instanced_object_ref, renderer::shader_ref, renderer::texture_ref,
     renderer::collider_ref, renderer::instanced_collider_ref, renderer::render_ref, renderer::instanced_render_ref,
-    value_pair, std::vector<value>
+    voxel_corner, voxel_desc,
+    value_pair, std::vector<value>, std::monostate
   >;
 
   var_t x;
@@ -138,7 +146,10 @@ template <> struct default_value<renderer::instanced_collider_ref> { static cons
 template <> struct default_value<renderer::render_ref> { static constexpr renderer::render_ref value = renderer::render_ref::invalid(); };
 template <> struct default_value<renderer::instanced_render_ref> { static constexpr renderer::instanced_render_ref value = renderer::instanced_render_ref::invalid(); };
 template <> struct default_value<value_pair> { static inline value_pair value{}; };
+template <> struct default_value<voxel_corner> { static constexpr voxel_corner value{}; };
+template <> struct default_value<voxel_desc> { static constexpr voxel_desc value{}; };
 template <> struct default_value<std::vector<value>> { static constexpr std::vector<openvtt::map::value> value{}; };
+template <> struct default_value<std::monostate> { static constexpr std::monostate value{}; };
 
 template <valid_value T>
 inline T default_value_v = default_value<T>::value;

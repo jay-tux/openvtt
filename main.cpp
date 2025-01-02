@@ -23,8 +23,26 @@ int main(int argc, const char **argv) {
     scene_instances,
     requires_highlight,
     requires_instanced_highlight,
-    highlight_binding
+    highlight_binding,
+    voxels,
+    perlin_scale
   ] = map_desc::parse_from("examples/suzannes");
+  log<log_type::DEBUG>("main", std::format("Map has {} voxel groups.", voxels.size()));
+
+  const auto voxel_shader = render_cache::load<shader>("voxel", "voxel");
+  voxel_shader->set_float(voxel_shader->loc_for("perlin_scale"), perlin_scale);
+
+  log<log_type::DEBUG>("main", "Tiered Perlin formulae:");
+  for (const auto &v: voxels) {
+    log<log_type::DEBUG>("main", std::format(
+      "    (({} * noise(xy * {} + {}) + ({} * noise(xy * {} + {}) + ({} * noise(xy * {} + {}) + ({} * noise(xy * {} + {})) / {}",
+      v->tiered_perlin[0][0], v->tiered_perlin[0][1], v->tiered_perlin[0][2],
+      v->tiered_perlin[1][0], v->tiered_perlin[1][1], v->tiered_perlin[1][2],
+      v->tiered_perlin[2][0], v->tiered_perlin[2][1], v->tiered_perlin[2][2],
+      v->tiered_perlin[3][0], v->tiered_perlin[3][1], v->tiered_perlin[3][2],
+      v->tiered_perlin[0][0] + v->tiered_perlin[1][0] + v->tiered_perlin[2][0] + v->tiered_perlin[3][0]
+    ));
+  }
 
   auto cam = camera{};
 
@@ -71,6 +89,10 @@ int main(int argc, const char **argv) {
     }
   });
 
+  const auto voxel_view_loc = voxel_shader->loc_for("view");
+  const auto voxel_proj_loc = voxel_shader->loc_for("projection");
+  const auto lighting_voxels = setup_phong_shading<point_light_count, int>(cam, lights);
+
   using highlighter = hover_highlighter;
 
   while (!win.should_close()) {
@@ -93,27 +115,6 @@ int main(int argc, const char **argv) {
       }
     }
 
-    // perlin_square->draw(cam, [&scales](const shader_ref &sr, const renderable &) {
-    //   sr->set_float(4, scales[0]);
-    //   sr->set_float(5, scales[1]);
-    //   sr->set_float(6, scales[2]);
-    //   sr->set_float(7, 0 * static_cast<float>(ImGui::GetTime()));
-    // });
-
-    // highlighter::bind_highlight_tex(15);
-    // phong->set_int(phong->loc_for("highlight_map"), 15);
-    // suzanne->draw(cam, lighting_suzanne);
-
-    // instanced_phong->set_int(instanced_phong->loc_for("highlight_map"), 15);
-    // many_monkeys->draw(cam, lighting_monkeys);
-
-    // for (const auto &r : scene) {
-    //   r->draw(cam, lighting_suzanne);
-    // }
-    // for (const auto &i : scene_instances) {
-    //   i->draw(cam, lighting_monkeys);
-    // }
-
     for (const auto &r : set_base) r->draw(cam, lighting_default);
     for (const auto &[r, l] : set_highlight) {
       curr_single = l;
@@ -125,6 +126,13 @@ int main(int argc, const char **argv) {
       r->draw(cam, lighting_instanced_highlight);
     }
 
+    int i; // ignored
+    lighting_voxels(voxel_shader, i);
+    cam.set_matrices(*voxel_shader, voxel_view_loc, voxel_proj_loc);
+    for (const auto &v: voxels) {
+      v->draw(*voxel_shader);
+    }
+
     cache::draw_colliders(cam);
 
     fps_counter::render();
@@ -133,13 +141,6 @@ int main(int argc, const char **argv) {
     cache::detail_window();
     lights.detail_window();
     highlighter::get_fbo().draw_texture_imgui("Highlight Buffer", 256, 256);
-    // ImGui::ShowMetricsWindow();
-
-    // ImGui::Begin("Perlin Parameters");
-    // ImGui::SliderFloat("scale r", scales, -5.0f, 50.0f);
-    // ImGui::SliderFloat("scale g", scales + 1, -5.0f, 50.0f);
-    // ImGui::SliderFloat("scale b", scales + 2, -5.0f, 50.0f);
-    // ImGui::End();
 
     win.frame_post();
   }
