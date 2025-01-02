@@ -333,9 +333,17 @@ struct phong_uniforms {
     unsigned int attenuation; //!< The location of the attenuation uniform for this point light (vec3: constant, linear, and quadratic).
   };
 
+  struct directional_light {
+    unsigned int direction; //!< The location of the direction uniform for this directional light (vec3).
+    unsigned int diffuse; //!< The location of the diffuse light color uniform for this directional light (vec3).
+    unsigned int specular; //!< The location of the specular light color uniform for this directional light (vec3).
+  };
+
   unsigned int view_pos; //!< The location of the view position uniform (vec3).
-  unsigned int ambient_light; //!< The location of the ambient light strength uniform (float).
   unsigned int used_point_count; //!< The location of the number of point lights used uniform (int).
+  unsigned int use_sun; //!< The location of the use_sun uniform (int).
+  unsigned int ambient_light; //!< The location of the ambient light strength uniform (float).
+  directional_light sun; //!< The directional light.
   point_light points[point_light_count]; //!< The point lights.
 
   /**
@@ -360,6 +368,12 @@ struct phong_uniforms {
     res.view_pos = s->loc_for("view_pos");
     res.ambient_light = s->loc_for("ambient_light");
     res.used_point_count = s->loc_for("used_point_count");
+    res.use_sun = s->loc_for("use_sun");
+    res.sun = {
+      .direction = s->loc_for("sun.direction"),
+      .diffuse = s->loc_for("sun.diffuse"),
+      .specular = s->loc_for("sun.specular")
+    };
     for (size_t i = 0; i < point_light_count; ++i) {
       res.points[i] = {
         .pos = s->loc_for("points[" + std::to_string(i) + "].pos"),
@@ -387,18 +401,26 @@ public:
     glm::vec3 attenuation {1.0f, 0.09f, 0.032f}; //!< The attenuation of the point light (constant, linear, quadratic).
   };
 
+  struct directional_light {
+    glm::vec3 direction; //!< The direction of the directional light.
+    glm::vec3 diffuse; //!< The diffuse light color of the directional light.
+    glm::vec3 specular{1, 1, 1}; //!< The specular light color of the directional light.
+  };
+
   /**
    * @brief Construct a phong_lighting struct.
    * @param ambient The ambient light strength.
+   * @param sun The directional light.
    * @param points A list of point lights.
    *
    * Each of the point lights in `points` should be a pair (active, light), where `active` is a boolean indicating
    * whether the light is active, and `light` is the point light.
    */
   explicit constexpr phong_lighting(
-    const float ambient = 0.1f,
-    const std::initializer_list<std::pair<bool, point_light>> points = {}
-  ) : ambient_strength{ambient}, points{points} {}
+    const float ambient,
+    const directional_light &sun,
+    const std::initializer_list<std::pair<bool, point_light>> points
+  ) : ambient_strength{ambient}, sun{sun}, points{points} {}
 
   /**
    * @brief Get the number of point lights.
@@ -439,6 +461,8 @@ public:
   void detail_window();
 
   float ambient_strength; //!< The ambient light strength.
+  bool enable_sun = true; //!< Whether the directional light is enabled.
+  directional_light sun; //!< The directional light.
   std::vector<std::pair<bool, point_light>> points; //!< The point lights.
 };
 
@@ -465,6 +489,10 @@ constexpr std::invocable<const shader_ref &, const Obj &> auto setup_phong_shadi
 
     sr->set_vec3(uniforms.view_pos, cam.position);
     sr->set_float(uniforms.ambient_light, lighting.ambient_strength);
+    sr->set_int(uniforms.use_sun, lighting.enable_sun);
+    sr->set_vec3(uniforms.sun.direction, lighting.sun.direction);
+    sr->set_vec3(uniforms.sun.diffuse, lighting.sun.diffuse);
+    sr->set_vec3(uniforms.sun.specular, lighting.sun.specular);
     int used = 0;
     for (size_t i = 0; i < lighting.size() && used < point_light_count; i++) {
       auto [active, light] = lighting[i];

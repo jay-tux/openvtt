@@ -1,4 +1,4 @@
-voxels(3, 3, 25) {
+voxels(3, 3, 10) {
     background = (188,183,153);
     spots = (49,17,10);
     palette = @mix(background, spots, 1);

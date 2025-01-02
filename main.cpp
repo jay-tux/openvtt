@@ -51,7 +51,12 @@ int main(int argc, const char **argv) {
   win.frame_post();
 
   phong_lighting lights(0.1f, {
-    { true, { .pos = {0, 1, 0}, .diffuse = {0.9, 0.9, 0.6} } }
+      .direction = {1, -1, 0},
+      .diffuse = {0.75, 0.75, 0.75},
+      .specular = {1, 1, 1}
+    },
+    {
+      { true, { .pos = {0, 1, 0}, .diffuse = {0.9, 0.9, 0.6} } }
   });
 
   std::vector<render_ref> set_base;
