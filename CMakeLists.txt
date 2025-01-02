@@ -88,6 +88,11 @@ add_executable(openvtt
         map/object_cache.cpp
 )
 
+target_compile_definitions(openvtt PRIVATE
+        $<$<CONFIG:Debug>:OPENVTT_DEBUG>
+        $<$<CONFIG:Release>:OPENVTT_RELEASE>
+)
+
 target_include_directories(openvtt PRIVATE ${CMAKE_SOURCE_DIR})
 
 target_link_libraries(openvtt PRIVATE

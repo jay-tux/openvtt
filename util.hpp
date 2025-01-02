@@ -180,4 +180,13 @@ inline std::string demangle(const char *name) {
 }
 }
 
+#ifdef OPENVTT_DEBUG
+#include "traced_exception.hpp"
+#define OPENVTT_UNREACHABLE throw openvtt::traced_exception("Unreachable code should not be reached at " __FILE__ ":" + std::to_string(__LINE__));
+#elif defined(OPENVTT_RELEASE)
+#define OPENVTT_UNREACHABLE std::unreachable();
+#else
+#error "No build type specified - define either OPENVTT_DEBUG (for debug mode) or OPENVTT_RELEASE (for release mode)"
+#endif
+
 #endif //UTIL_HPP
