@@ -9,6 +9,11 @@
 #include "renderer/log_view.hpp"
 
 namespace openvtt::map {
+/**
+ * @brief A lexer error listener.
+ *
+ * This error listener writes all lexer errors to the log.
+ */
 struct lexer_error_listener final : antlr4::BaseErrorListener {
   std::string file;
 
@@ -21,10 +26,14 @@ struct lexer_error_listener final : antlr4::BaseErrorListener {
     renderer::log<renderer::log_type::WARNING>("map_lexer",
       std::format("{}:{}:{}: {} (on token '{}')", file, line, charPositionInLine, msg, offendingSymbol->getText())
     );
-    std::cerr << "Lexer error at line " << line << ":" << charPositionInLine << " " << msg << std::endl;
   }
 };
 
+/**
+ * @brief A parser error listener.
+ *
+ * This error listener writes all parser errors to the log.
+ */
 struct parser_error_listener final : antlr4::BaseErrorListener {
   std::string file;
 
@@ -37,7 +46,6 @@ struct parser_error_listener final : antlr4::BaseErrorListener {
     renderer::log<renderer::log_type::WARNING>("map_parser",
       std::format("{}:{}:{}: {} (on token '{}')", file, line, charPositionInLine, msg, offendingSymbol->getText())
     );
-    std::cerr << "Parser error at line " << line << ":" << charPositionInLine << " " << msg << std::endl;
   }
 };
 }

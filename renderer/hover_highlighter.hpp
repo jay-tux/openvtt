@@ -13,8 +13,14 @@
 #include "window.hpp"
 
 namespace openvtt::renderer {
+/**
+ * @brief A helper class connecting the FBO and the render cache to highlight objects under the mouse.
+ */
 class hover_highlighter {
 public:
+  /**
+   * @brief Resets the highlighter.
+   */
   static inline void reset() {
     force_init();
     highlight_fbo->clear();
@@ -29,6 +35,10 @@ public:
     }
   }
 
+  /**
+   * @brief Checks which object is under the mouse and renders it to the FBO.
+   * @param cam The camera to use for rendering and checking.
+   */
   static inline void highlight_checking(const camera &cam) {
     last_coll = render_cache::mouse_over(cam);
     const auto &sh = **highlight_shader;
@@ -58,11 +68,19 @@ public:
     highlight_fbo->unbind();
   }
 
+  /**
+   * @brief Binds the FBO highlight texture to a slot.
+   * @param slot The slot to bind the texture to.
+   */
   static inline void bind_highlight_tex(const unsigned int slot) {
     force_init();
     highlight_fbo->bind_rgb_to(slot);
   }
 
+  /**
+   * @brief Gets the underlying FBO.
+   * @return The FBO.
+   */
   static inline const fbo &get_fbo() {
     force_init();
     return *highlight_fbo;

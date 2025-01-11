@@ -16,14 +16,40 @@
 #include "collider.hpp"
 
 namespace openvtt::renderer {
+/**
+ * @brief A class representing a reference to an object in the cache.
+ * @tparam T The type of object to reference.
+ */
 template <typename T>
 class t_ref {
 public:
+  /**
+   * @brief Derefences the reference.
+   * @return The object the reference points to.
+   */
   constexpr T *operator->() const { return &**this; }
 
+  /**
+   * @brief Compares two references for equality.
+   * @param other The reference to compare to.
+   * @return `true` if the references point to the same object, `false` otherwise.
+   */
   constexpr bool operator==(const t_ref &other) const { return idx == other.idx; }
+  /**
+   * @brief Compares two references for inequality.
+   * @param other The reference to compare to.
+   * @return `true` if the references point to different objects, `false` otherwise.
+   */
   constexpr bool operator!=(const t_ref &other) const { return idx != other.idx; }
+  /**
+   * @brief Constructs a new, invalid reference.
+   * @return The invalid reference.
+   */
   static constexpr t_ref invalid() { return t_ref{-1UL}; }
+  /**
+   * @brief Gets the raw value of the reference.
+   * @return The raw value of the reference.
+   */
   [[nodiscard]] constexpr size_t raw() const { return idx; }
 
 private:
@@ -35,17 +61,21 @@ private:
 template <typename T>
 constexpr T &operator*(const t_ref<T> &r);
 
-using object_ref = t_ref<render_object>;
-using instanced_object_ref = t_ref<instanced_object>;
-using voxel_ref = t_ref<voxel_group>;
-using shader_ref = t_ref<shader>;
-using texture_ref = t_ref<texture>;
-using collider_ref = t_ref<collider>;
-using instanced_collider_ref = t_ref<instanced_collider>;
+using object_ref = t_ref<render_object>; //!< Type alias for a reference to a render object.
+using instanced_object_ref = t_ref<instanced_object>; //!< Type alias for a reference to an instanced render object.
+using voxel_ref = t_ref<voxel_group>; //!< Type alias for a reference to a voxel group.
+using shader_ref = t_ref<shader>; //!< Type alias for a reference to a shader.
+using texture_ref = t_ref<texture>; //!< Type alias for a reference to a texture.
+using collider_ref = t_ref<collider>; //!< Type alias for a reference to a collider.
+using instanced_collider_ref = t_ref<instanced_collider>; //!< Type alias for a reference to an instanced collider.
 
 class render_cache;
 }
 
+/**
+ * @brief Template specialization for hashing a reference.
+ * @tparam T The type of object to reference.
+ */
 template <typename T>
 struct std::hash<openvtt::renderer::t_ref<T>> { // NOLINT(*-dcl58-cpp) // false positive
   static size_t operator()(const openvtt::renderer::t_ref<T> &ref) noexcept {
@@ -53,6 +83,10 @@ struct std::hash<openvtt::renderer::t_ref<T>> { // NOLINT(*-dcl58-cpp) // false 
   }
 };
 
+/**
+ * @brief Template specialization for formatting a reference.
+ * @tparam T The type of object to reference.
+ */
 template <typename T>
 struct std::formatter<openvtt::renderer::t_ref<T>, char> { // NOLINT(*-dcl58-cpp) // false positive
   using type = openvtt::renderer::t_ref<T>;
@@ -64,15 +98,30 @@ struct std::formatter<openvtt::renderer::t_ref<T>, char> { // NOLINT(*-dcl58-cpp
 #include "renderable.hpp"
 
 namespace openvtt::renderer {
-using render_ref = t_ref<renderable>;
-using instanced_render_ref = t_ref<instanced_renderable>;
+using render_ref = t_ref<renderable>; //!< Type alias for a reference to a renderable.
+using instanced_render_ref = t_ref<instanced_renderable>; //!< Type alias for a reference to an instanced renderable.
 
+/**
+ * @brief Namespace for type traits.
+ */
 namespace type_traits {
+/**
+ * @brief Concept for checking if two types are the same, ignoring cv-qualifiers and references.
+ */
 template <typename T1, typename T2>
 concept cvr_same = std::same_as<std::remove_cvref_t<T1>, std::remove_cvref_t<T2>>;
+/**
+ * @brief A concept that is always false.
+ */
 template <typename T>
 concept invalid = false;
 
+/**
+ * @brief Concept for checking if a type is loadable from a set of arguments.
+ *
+ * For this, the type must have a static member function `load_from` that returns the type itself, and takes the
+ * arguments provided.
+ */
 template <typename T, typename ... Args>
 concept loadable = requires(Args &&... args)
 {
@@ -89,19 +138,42 @@ concept loadable = requires(Args &&... args)
  */
 class render_cache {
 public:
+  /**
+   * @brief Construct a new render cache.
+   */
   constexpr render_cache() = default;
 
+  /**
+   * @brief Dereferences a reference to a value in the cache.
+   * @tparam T The type of object to dereference.
+   * @param ref The reference (`t_ref<T>`) to the object.
+   * @return A reference (`T &`) to the object in the cache.
+   */
   template <typename T>
   constexpr static T &operator[](const t_ref<T> &ref) {
     return cache_for<T>()[ref.idx];
   }
 
+  /**
+   * @brief Constructs a new value in the cache.
+   * @tparam T The type of object to construct.
+   * @tparam Args The types of the arguments to pass to the constructor.
+   * @param args The arguments to pass to the constructor.
+   * @return A reference to the newly constructed object.
+   */
   template <typename T, typename ... Args> requires(std::constructible_from<T, Args...>)
   constexpr static t_ref<T> construct(Args &&... args) {
     cache_for<T>().emplace_back(std::forward<Args>(args)...);
     return last_for<T>();
   }
 
+  /**
+   * @brief Loads a value into the cache.
+   * @tparam T The type of object to load (should satisfy the `loadable` concept).
+   * @tparam Args The types of the arguments to pass to the `load_from` function.
+   * @param args The arguments to pass to the `load_from` function.
+   * @return A reference to the loaded object.
+   */
   template <typename T, typename ... Args> requires(type_traits::loadable<T, Args...>)
   constexpr static t_ref<T> load(Args &&... args) {
     cache_for<T>().emplace_back(T::load_from(std::forward<Args>(args)...));
@@ -243,6 +315,12 @@ private:
  */
 constexpr static inline auto cache = render_cache{};
 
+/**
+ * @brief Dereferences a reference to a value in the cache.
+ * @tparam T The type of object to dereference.
+ * @param r The reference to the object.
+ * @return The object the reference points to.
+ */
 template <typename T>
 constexpr T &operator*(const t_ref<T> &r) { return cache[r]; }
 }

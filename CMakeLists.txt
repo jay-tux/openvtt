@@ -122,7 +122,7 @@ file(CREATE_LINK "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/assets" COPY_
 if(DOXYGEN_FOUND)
     doxygen_add_docs(
             docs
-            "${CMAKE_SOURCE_DIR}" "${CMAKE_SOURCE_DIR}/renderer/"
+            "${CMAKE_SOURCE_DIR}" "${CMAKE_SOURCE_DIR}/renderer/" "${CMAKE_SOURCE_DIR}/map/"
             ALL
             CONFIG_FILE ${CMAKE_SOURCE_DIR}/Doxyfile
     )

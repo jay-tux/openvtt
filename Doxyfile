@@ -21,5 +21,7 @@ GENERATE_HTML = YES
 GENERATE_LATEX = YES
 USE_PDFLATEX = YES
 
-INPUT = filesys.hpp renderer/
+INPUT = ./ renderer/ map/
 FILE_PATTERNS = *.hpp
+
+WARN_IF_UNDOCUMENTED = YES

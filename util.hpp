@@ -99,31 +99,6 @@ std::optional<optional_held_t<std::invoke_result_t<F, T>>> operator>>(const std:
   return res.has_value() ? std::optional{res.value()} : std::nullopt;
 }
 
-namespace detail {
-template <typename Res, typename T1, typename ... Ts>
-constexpr std::optional<Res> any_should_be(const std::any &any) {
-  if (auto *ptr = std::any_cast<T1>(any)) return std::optional{Res{*ptr}};
-  if constexpr(sizeof...(Ts) != 0) return any_should_be<Res, Ts...>(any);
-  return std::nullopt;
-}
-}
-
-/**
- * @brief Checks whether an `std::any` contains a value of a provided type.
- * @tparam Ts The types to check against.
- * @param any The `std::any` to check.
- * @return A value if possible, otherwise `std::nullopt`.
- *
- * If `any` does not hold any value, returns `std::nullopt`. <br>
- * If `any` holds a value of any type included in `Ts...`, returns a `std::variant` containing that value. <br>
- * Otherwise, returns `std::nullopt`.
- */
-template <typename ... Ts>
-constexpr std::optional<std::variant<Ts...>> any_should_be(const std::any &any) {
-  if (!any.has_value()) return std::nullopt;
-  return detail::any_should_be<std::variant<Ts...>, Ts...>(any);
-}
-
 /**
  * @brief Executes a function if an `std::optional` holds no value.
  * @tparam T The type contained in the `std::optional`.

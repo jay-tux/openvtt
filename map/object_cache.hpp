@@ -17,13 +17,37 @@
 #include "renderer/log_view.hpp"
 
 namespace openvtt::map {
+/**
+ * @brief Structure representing a location in the source file.
+ */
 class loc {
 public:
+  /**
+   * @brief Constructs a new (invalid) location.
+   */
   constexpr loc() : file{"(invalid)"}, line{-1UL}, col{-1UL} {}
+  /**
+   * @brief Constructs a new location.
+   * @param file The file name.
+   * @param line The line number.
+   * @param col The column number.
+   */
   constexpr loc(std::string file, const size_t line, const size_t col) : file{std::move(file)}, line{line}, col{col} {}
-  constexpr loc(const antlr4::ParserRuleContext &ctx, std::string file) :
-    file{std::move(file)}, line{ctx.start->getLine()}, col{ctx.start->getCharPositionInLine()} {}
 
+  /**
+   * @brief Constructs a new location from a parser context.
+   * @param ctx The parser context.
+   * @param file The file name.
+   *
+   * The context is used to extract the line number and column number (both from the start of the context).
+   */
+  constexpr loc(const antlr4::ParserRuleContext &ctx, std::string file) :
+    file{std::move(file)}, line{ctx.start->getLine()}, col{ctx.start->getCharPositionInLine() + 1} {}
+
+  /**
+   * @brief Generates a string representation of the location.
+   * @return The string representation of the location.
+   */
   [[nodiscard]] constexpr std::string str() const { return std::format("{}:{}:{}", file, line, col); }
 
 private:
@@ -34,10 +58,30 @@ private:
 
 class value;
 
+/**
+ * @brief Structure representing a pair of values.
+ *
+ * Due to cyclical dependencies, the two values are stored as pointers (on the heap).
+ */
 class value_pair {
 public:
+  /**
+   * @brief Creates a new value pair with two invalid values.
+   */
   value_pair();
+
+  /**
+   * @brief Creates a new value pair by copying the given values.
+   * @param first The first value.
+   * @param second The second value.
+   */
   value_pair(const value &first, const value &second);
+
+  /**
+   * @brief Creates a new value pair by moving the given values.
+   * @param first The first value.
+   * @param second The second value.
+   */
   value_pair(value &&first, value &&second);
   value_pair(const value_pair &other);
   value_pair(value_pair &&other) noexcept;
@@ -45,8 +89,22 @@ public:
   value_pair &operator=(const value_pair &other);
   value_pair &operator=(value_pair &&other) noexcept;
 
+  /**
+   * @brief Gets the first and second values.
+   * @return A `std::pair` containing references to the first and second values.
+   */
   [[nodiscard]] std::pair<const value &, const value &> as_pair() const;
+
+  /**
+   * @brief Gets a reference to the first value.
+   * @return The first value.
+   */
   [[nodiscard]] value &first() const;
+
+  /**
+   * @brief Gets a reference to the second value.
+   * @return The second value.
+   */
   [[nodiscard]] value &second() const;
 
   ~value_pair();
@@ -55,9 +113,12 @@ private:
   value *_second = nullptr;
 };
 
-using voxel_corner = std::tuple<glm::vec3, glm::vec3, float>;
-using voxel_desc = std::array<voxel_corner, 9>;
+using voxel_corner = std::tuple<glm::vec3, glm::vec3, float>; //!< Type alias for a voxel corner `(glm::vec3, glm::vec3, float)`.
+using voxel_desc = std::array<voxel_corner, 9>; //!< Type alias for a voxel description (`std::array<voxel_corner, 9>`).
 
+/**
+ * @brief Concept representing a valid value type.
+ */
 template <typename T>
 concept valid_value = std::same_as<T, int> || std::same_as<T, float> || std::same_as<T, std::string> ||
   std::same_as<T, glm::vec3>  || std::same_as<T, glm::mat4> || std::same_as<T, renderer::object_ref> ||
@@ -68,6 +129,11 @@ concept valid_value = std::same_as<T, int> || std::same_as<T, float> || std::sam
   std::same_as<T, voxel_corner> || std::same_as<T, voxel_desc> ||
   std::same_as<T, std::vector<value>> || std::same_as<T, std::monostate>;
 
+/**
+ * @brief Gets a string representation of the type of the value.
+ * @tparam T The type of the value.
+ * @return The string representation of the type of the value.
+ */
 template <valid_value T>
 constexpr std::string type_name() {
   if constexpr(std::same_as<T, int>) return "int";
@@ -91,21 +157,76 @@ constexpr std::string type_name() {
   OPENVTT_UNREACHABLE;
 }
 
+/**
+ * @brief Structure representing a value.
+ *
+ * Values are stored together with the location in the source file where they were generated.
+ *
+ * The following types are supported as values:
+ * - `int`, `float`, `std::string` primitive types,
+ * - `glm::vec3`, `glm::mat4` vector and matrix types,
+ * - `renderer::object_ref`, `renderer::instanced_object_ref`, `renderer::shader_ref`, `renderer::texture_ref`,
+ * `renderer::collider_ref`, `renderer::instanced_collider_ref`, `renderer::render_ref`,
+ * `renderer::instanced_render_ref` types from the renderer,
+ * - `pair` (a pair of two values),
+ * - `voxel_corner` and `voxel_desc` types for voxels,
+ * - `std::vector<value>` for lists of values,
+ * - `std::monostate` as `void` alias (representing no value).
+ */
 class value {
 public:
+  /**
+   * @brief Constructs a new (invalid/default) value.
+   */
   constexpr value() = default;
+
+  /**
+   * @brief Copies a concrete value into a new value.
+   * @tparam T The type of the value.
+   * @param x The value to copy.
+   * @param at The location of the value.
+   */
   template <valid_value T>
   constexpr explicit value(T x, loc at) : x{x}, generated{std::move(at)} {}
 
+  /**
+   * @brief Force-casts a value to a given type.
+   * @tparam T The type to cast to.
+   * @return The cast value.
+   */
   template <valid_value T>
   constexpr const T &as() const { return std::get<T>(x); }
+  /**
+   * @brief Force-casts a value to a given type.
+   * @tparam T The type to cast to.
+   * @return The cast value.
+   */
   template <valid_value T>
   constexpr T &as() { return std::get<T>(x); }
+
+  /**
+   * @brief Checks if the value is of a given type.
+   * @tparam T The type to check for.
+   * @return `true` if the value is of the given type, `false` otherwise.
+   *
+   * If the contained value (`std::variant`) would be `valueless_by_exception`, this function returns `false`.
+   */
   template <valid_value T>
   [[nodiscard]] constexpr bool is() const { return !x.valueless_by_exception() && std::holds_alternative<T>(x); }
+
+  /**
+   * @brief Applies a visitor to the value.
+   * @tparam F The type of the visitor.
+   * @param f The visitor to apply.
+   * @return The return value of the visitor.
+   */
   template <typename F>
   constexpr auto visit(F &&f) { return std::visit(f, x); }
 
+  /**
+   * @brief Gets a string representation of the type of the value.
+   * @return The string representation of the type of the value.
+   */
   [[nodiscard]] constexpr std::string type_name() const {
     if (x.valueless_by_exception()) {
       return "(invalid type; no value)";
@@ -116,6 +237,10 @@ public:
   template <valid_value T>
   [[nodiscard]] inline T should_be() const;
 
+  /**
+   * @brief Gets the location of the value.
+   * @return The location where the value was generated.
+   */
   [[nodiscard]] constexpr const loc &pos() const { return generated; }
 
 private:
@@ -131,6 +256,10 @@ private:
   loc generated;
 };
 
+/**
+ * @brief A type trait holding default values for each valid value type.
+ * @tparam T The valid value type.
+ */
 template <valid_value T> struct default_value;
 template <> struct default_value<int> { static constexpr int value = 0; };
 template <> struct default_value<float> { static constexpr float value = 0.0f; };
@@ -151,9 +280,22 @@ template <> struct default_value<voxel_desc> { static constexpr voxel_desc value
 template <> struct default_value<std::vector<value>> { static constexpr std::vector<openvtt::map::value> value{}; };
 template <> struct default_value<std::monostate> { static constexpr std::monostate value{}; };
 
+/**
+ * @brief A helper variable holding the default value for each valid value type.
+ * @tparam T The valid value type.
+ */
 template <valid_value T>
 inline T default_value_v = default_value<T>::value;
 
+/**
+ * @brief Forces a value into a certain target type.
+ * @tparam T The target type.
+ * @return The value as the target type, or the default value for that type.
+ *
+ * If the value is not of the target type, an error message is logged, and the default value for the target type is
+ * returned.
+ * Otherwise, the value is returned as the target type.
+ */
 template<valid_value T>
 T value::should_be() const {
   if (is<T>()) return as<T>();
@@ -169,14 +311,29 @@ T value::should_be() const {
   return default_value_v<T>;
 }
 
-
+/**
+ * @brief A class representing an object cache.
+ *
+ * The object caches store variables and values that are used in the map script.
+ */
 class object_cache {
 public:
+  /**
+   * @brief Attempts to look up a variable in the cache (without error message).
+   * @param name The name of the variable.
+   * @return The value of the variable, or `std::nullopt` if the variable does not exist.
+   */
   std::optional<value> lookup_var_maybe(const std::string &name) const {
     const auto it = ctx.find(name);
     return it == ctx.end() ? std::nullopt : std::optional{it->second.first};
   }
 
+  /**
+   * @brief Attempts to look up a variable in the cache (with error message).
+   * @param name The name of the variable.
+   * @param at The location where the variable is used.
+   * @return The value of the variable, or `std::nullopt` if the variable does not exist.
+   */
   std::optional<value> lookup_var_maybe(const std::string &name, const loc &at) const {
     return with_empty(lookup_var_maybe(name), [&at, &name]() {
       renderer::log<renderer::log_type::ERROR>("object_cache",
@@ -185,18 +342,27 @@ public:
     });
   }
 
+  /**
+   * @brief Looks up a variable in the cache.
+   * @param name The name of the variable.
+   * @param at The location where the variable is used.
+   * @return The value of the variable, or a default value if the variable does not exist.
+   *
+   * If the variable does not exist, an error message is logged.
+   */
   value lookup_var(const std::string &name, const loc &at) const {
     return lookup_var_maybe(name, at) || [] { return value{}; };
   }
 
-  template <valid_value T>
-  std::optional<T> lookup_maybe(const std::string &name) {
-    return lookup_var_maybe(name) >> [](const std::pair<value, loc> &v) {
-      if (v.first.is<T>()) return std::optional{v.first.as<T>()};
-      return std::nullopt;
-    };
-  }
-
+  /**
+   * @brief Looks up a variable in the cache, and type-checks it.
+   * @tparam T The type to check for.
+   * @param name The name of the variable.
+   * @param at The location where the variable is used.
+   * @return The value of the variable, or a default value if the variable does not exist or is of the wrong type.
+   *
+   * This function does not perform integer-to-float promotion.
+   */
   template <valid_value T>
   T lookup(const std::string &name, const loc &at) {
     const auto var = lookup_var(name, at);
@@ -209,6 +375,17 @@ public:
     return default_value_v<T>;
   }
 
+  /**
+   * @brief Attempts to assign to a variable in the cache.
+   * @tparam T The type of the value to assign.
+   * @param name The name of the variable.
+   * @param val The value to assign.
+   * @param at The location where the assignment is made.
+   *
+   * If the variable does not exist, it is created (declared).
+   * If the variable exists, it is overwritten if the types match.
+   * If the variable exists, but the types don't match, an error message is logged.
+   */
   template <valid_value T>
   void assign(const std::string &name, T val, const loc &at) {
     if (const auto it = ctx.find(name); it != ctx.end()) {
@@ -228,6 +405,14 @@ public:
     }
   }
 
+  /**
+   * @brief Attempts to assign to a variable in the cache.
+   * @param name The name of the variable.
+   * @param val The value to assign.
+   * @param at The location where the assignment is made.
+   *
+   * This function is a wrapper around `assign` that forwards the value to the correct overload.
+   */
   void assign(const std::string &name, value &&val, const loc &at) {
     val.visit([this, &name, &at]<typename T>(T &&t) { assign(name, t, at); });
   }

@@ -87,11 +87,12 @@ std::any map_visitor::visitEmptyListExpr(mapParser::EmptyListExprContext *contex
 }
 
 std::any map_visitor::visitListExpr(mapParser::ListExprContext *context) {
-  return value{visit_no_value<std::vector<value>>(context->exprs, at(*context), "value list"), at(*context)};
+  return value{visit_type_check<std::vector<value>>(context->exprs, at(*context), "value list"), at(*context)};
 }
 
 std::any map_visitor::visitAssignExpr(mapParser::AssignExprContext *context) {
   return visit_maybe_value(context->value, at(*context)) | [context, this](value v) {
+    // TODO: check in which context the variable is defined (if any)
     context_stack.back().assign(context->x->getText(), std::move(v), at(*context));
     return std::any{identifier{context->x->getText()}};
   } || [this, context]{ return no_value{at(*context)}; };

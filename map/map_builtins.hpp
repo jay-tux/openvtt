@@ -10,14 +10,37 @@
 #include "map_visitor.hpp"
 #include "renderer/log_view.hpp"
 
+/**
+ * @brief Namespace for map parsing.
+ */
 namespace openvtt::map {
+/**
+ * @brief Type alias for either a value or an error.
+ */
 template <typename T> using or_error = either<std::string, T>;
 
+/**
+ * @brief Checks if a function is called with the correct number of arguments.
+ * @param args The provided arguments.
+ * @param n The expected number of arguments.
+ * @param function The function name.
+ * @param pos The positions of the call
+ * @return Either the arguments (again) or an error message.
+ */
 inline or_error<std::vector<value>> n_args(const std::vector<value> &args, const size_t n, const std::string &function, const loc &pos) {
   if (args.size() != n) return left(std::format("Function {} expects {} arguments, but got {} at {}.", function, n, args.size(), pos.str()));
   return right(args);
 }
 
+/**
+ * @brief Type-checks a value.
+ * @tparam T The expected type.
+ * @param v The value to check.
+ * @return The contained value, or and error message.
+ *
+ * If the provided value is of the required type, returns that value as a `right(value)`.
+ * Otherwise, an error message is returned as a `left(error)`.
+ */
 template <valid_value T>
 inline or_error<T> type_check(const value &v) {
   if (v.is<T>()) return right(v.as<T>());
@@ -27,6 +50,15 @@ inline or_error<T> type_check(const value &v) {
   return left(std::format("Expected a value of type {}, but got {} at {}.", type_name<T>(), v.type_name(), v.pos().str()));
 }
 
+/**
+ * @brief Type-checks a set of values.
+ * @tparam Ts The expected types.
+ * @param vs The values to check.
+ * @return A tuple of the contained values, or an error message.
+ *
+ * If any of the values are not of the required type, an error message indicating the first mismatch is returned.
+ * Otherwise, the values are returned as a tuple, in the same order as the provided values.
+ */
 template <valid_value ... Ts>
 or_error<std::tuple<Ts...>> type_check_multi(const std::array<value, sizeof...(Ts)> &vs) {
   using tup = std::tuple<Ts...>;
@@ -37,6 +69,16 @@ or_error<std::tuple<Ts...>> type_check_multi(const std::array<value, sizeof...(T
   return lambda(vs, std::make_index_sequence<sizeof...(Ts)>{});
 }
 
+/**
+ * @brief Check if all values in the vector have the same type.
+ * @tparam T The expected type.
+ * @param vs The values to check.
+ * @return A vector with the contained values, or an error message.
+ *
+ * If any of the values in the vector is not of the required type, an error message indicating the first mismatch is
+ * returned.
+ * Otherwise, all values are "unwrapped" and returned as a new vector.
+ */
 template <typename T>
 inline or_error<std::vector<T>> type_check_vector(const std::vector<value> &vs) {
   std::vector<T> res;
@@ -48,6 +90,22 @@ inline or_error<std::vector<T>> type_check_vector(const std::vector<value> &vs) 
   return right(res);
 }
 
+/**
+ * @brief Type-checks a vector of values.
+ * @tparam F A helper type-check function (should be of type (const value_pair &) -> or_error<T>).
+ * @param vs The values to check.
+ * @param f The function.
+ * @return Either a vector of the contained values, or an error message.
+ *
+ * First, we ensure that all values in the vector are of the type `value_pair`.
+ * If any of them are not, an error message indicating the first mismatch is returned.
+ * For each valid `value_pair`, `f` is invoked with the pair as argument.
+ * If `f` returns an error, that error is returned.
+ *
+ * We loop once over the entire list, meaning that each value is checked to be a `value_pair` and then immediately after,
+ * `f` is invoked.
+ * You cannot assume that all values in the list are `value_pair`s upon the first invocation of `f`.
+ */
 template <std::invocable<const value_pair &> F>
 requires(is_either<res_t<F, const value_pair &>>)
 inline or_error<std::vector<typename either_traits<res_t<F, const value_pair &>>::right_t>> type_check_pair_vector(const std::vector<value> &vs, F &&f) {
@@ -64,11 +122,31 @@ inline or_error<std::vector<typename either_traits<res_t<F, const value_pair &>>
   return right(res);
 }
 
+/**
+ * @brief Checks if a function is called with exactly one argument of the provided type.
+ * @tparam T The expected argument type.
+ * @param args The provided arguments.
+ * @param function The function name.
+ * @param pos The position of the call.
+ * @return Either the first (and only) value in the list, or an error message.
+ *
+ * This is a convenience function wrapping `n_args` (for 1 argument) and `type_check<T>`.
+ */
 template <valid_value T>
 or_error<T> ready_arg(const std::vector<value> &args, const std::string &function, const loc &pos) {
   return n_args(args, 1, function, pos) >> [](const std::vector<value> &a) { return type_check<T>(a[0]); };
 }
 
+/**
+ * @brief Checks if a function is called with the exact amount of arguments of the provided types.
+ * @tparam Ts The expected argument types.
+ * @param args The provided arguments.
+ * @param function The function name.
+ * @param pos The position of the call.
+ * @return Either a tuple of the contained values, or an error message.
+ *
+ * This is a convenience function wrapping `n_args` (for `sizeof...(Ts)` arguments) and `type_check_multi<Ts...>`.
+ */
 template <valid_value ... Ts>
 or_error<std::tuple<Ts...>> ready_args(const std::vector<value> &args, const std::string &function, const loc &pos) {
   constexpr static auto lambda = []<size_t ... idxs>(const std::vector<value> &a, std::index_sequence<idxs...>) {
@@ -79,6 +157,18 @@ or_error<std::tuple<Ts...>> ready_args(const std::vector<value> &args, const std
     >> [](const std::vector<value> &a) { return lambda(a, std::make_index_sequence<sizeof...(Ts)>{}); };
 }
 
+/**
+ * @brief Handles the result of a function call.
+ * @tparam T The provided value.
+ * @param res The result to be unwrapped.
+ * @param pos The position of the call.
+ * @param backup The value to be returned in case of errors.
+ * @return Either the contained value, or the backup value.
+ *
+ * If the provided value (which is expected to be the result of invoking a builtin function) is an error, the error is
+ * logged, and the default (backup) value is returned instead.
+ * Otherwise, the (successful) return value of the function is passed along.
+ */
 template <valid_value T>
 value handle(const or_error<T> &res, const loc &pos, const T &backup = {}) {
   return fold(
@@ -88,12 +178,31 @@ value handle(const or_error<T> &res, const loc &pos, const T &backup = {}) {
   );
 }
 
+/**
+ * @brief Handles the result of a function call that returns no value.
+ * @tparam T The provided value (ignored).
+ * @param res The result to be unwrapped.
+ * @param pos The position of the call.
+ * @return A value wrapping `std::monostate` (void).
+ *
+ * If the provided value is an error, the error is logged.
+ * After the check, this function returns a value of type `std::monostate` (which is used to indicate "no value").
+ */
 template <typename T>
 value handle_no_value(const or_error<T> &res, const loc &pos) {
   map_left(res, [](const std::string &err) { renderer::log<renderer::log_type::WARNING>("map_loader", err); return std::monostate{}; });
   return value{std::monostate{}, pos};
 }
 
+/**
+ * @brief Invokes the builtin `object` function.
+ * @param args The arguments from the parser.
+ * @param pos The position of the call.
+ * @return Either a reference to the (loaded) object, or an invalid reference.
+ *
+ * The `object` builtin loads an object (mesh) from an asset file.
+ * This function expects a single `string` argument.
+ */
 inline value invoke_object(const std::vector<value> &args, map_visitor &, const loc &pos) {
   return handle(
     ready_arg<std::string>(args, "@object", pos) |
@@ -102,6 +211,15 @@ inline value invoke_object(const std::vector<value> &args, map_visitor &, const 
     pos, renderer::object_ref::invalid());
 }
 
+/**
+ * @brief Invokes the builtin `object*` function.
+ * @param args The arguments from the parser.
+ * @param pos The position of the call.
+ * @return Either a reference to the (loaded) instanced object, or an invalid reference.
+ *
+ * The `object*` builtin loads an object (mesh) from an asset file, and creates a set of instances from it.
+ * This function expects a `string` argument (the asset file) and a vector of `mat4` values (the transforms).
+ */
 inline value invoke_object_star(const std::vector<value> &args, map_visitor &, const loc &pos) {
   return handle(
     ready_args<std::string, std::vector<value>>(args, "@object*", pos) >>
@@ -118,6 +236,15 @@ inline value invoke_object_star(const std::vector<value> &args, map_visitor &, c
   );
 }
 
+/**
+ * @brief Invokes the builtin `shader` function.
+ * @param args The arguments from the parser.
+ * @param pos The position of the call.
+ * @return Either a reference to the (loaded) shader, or an invalid reference.
+ *
+ * The `shader` builtin loads a shader pair (vertex and fragment) from the respective asset files.
+ * This function expects two `string` arguments.
+ */
 inline value invoke_shader(const std::vector<value> &args, map_visitor &, const loc &pos) {
   return handle(
     ready_args<std::string, std::string>(args, "@shader", pos) |
@@ -127,6 +254,15 @@ inline value invoke_shader(const std::vector<value> &args, map_visitor &, const 
   );
 }
 
+/**
+ * @brief Invokes the builtin `texture` function.
+ * @param args The arguments from the parser.
+ * @param pos The position of the call.
+ * @return Either a reference to the (loaded) texture, or an invalid reference.
+ *
+ * The `texture` builtin loads texture from an asset file.
+ * This function expects a single `string` argument (the asset file).
+ */
 inline value invoke_texture(const std::vector<value> &args, map_visitor &, const loc &pos) {
   return handle(
     ready_arg<std::string>(args, "@texture", pos) |
@@ -136,6 +272,15 @@ inline value invoke_texture(const std::vector<value> &args, map_visitor &, const
   );
 }
 
+/**
+ * @brief Invokes the builtin `collider` function.
+ * @param args The arguments from the parser.
+ * @param pos The position of the call.
+ * @return Either a reference to the (loaded) collider, or an invalid reference.
+ *
+ * The `collider` builtin loads a collider (mesh) from an asset file.
+ * This function expects a single `string` argument (the asset file).
+ */
 inline value invoke_collider(const std::vector<value> &args, map_visitor &, const loc &pos) {
   return handle(
     ready_arg<std::string>(args, "@collider", pos) |
@@ -145,6 +290,15 @@ inline value invoke_collider(const std::vector<value> &args, map_visitor &, cons
   );
 }
 
+/**
+ * @brief Invokes the builtin `collider*` function.
+ * @param args The arguments from the parser.
+ * @param pos The position of the call.
+ * @return Either a reference to the (loaded) instanced collider, or an invalid reference.
+ *
+ * The `collider*` builtin loads a collider (mesh) from an asset file, and creates a set of instances from it.
+ * This function expects a `string` argument (the asset file) and a vector of `mat4` values (the transforms).
+ */
 inline value invoke_collider_star(const std::vector<value> &args, map_visitor &, const loc &pos) {
   return handle(
     ready_args<std::string, std::vector<value>>(args, "@collider*", pos) >>
@@ -161,6 +315,15 @@ inline value invoke_collider_star(const std::vector<value> &args, map_visitor &,
   );
 }
 
+/**
+ * @brief Invokes the builtin `transform` function.
+ * @param args The arguments from the parser.
+ * @param pos The position of the call.
+ * @return Either a model matrix, or the identity matrix.
+ *
+ * The `transform` builtin constructs a model matrix from the provided position, rotation, and scale vectors.
+ * This function expects three `vec3` arguments.
+ */
 inline value invoke_transform(const std::vector<value> &args, map_visitor &, const loc &pos) {
   return handle(
     ready_args<glm::vec3, glm::vec3, glm::vec3>(args, "@transform", pos) |
@@ -173,6 +336,17 @@ inline value invoke_transform(const std::vector<value> &args, map_visitor &, con
   );
 }
 
+/**
+ * @brief Invokes the builtin `spawn` function.
+ * @param args The arguments from the parser.
+ * @param cache The map visitor cache.
+ * @param pos The position of the call.
+ * @return Either a reference to the spawned object, or an invalid reference.
+ *
+ * The `spawn` builtin creates a new renderable object from the provided object, shader, and textures list.
+ * This function expects a `string` (name), an `object` reference, a `shader` reference, and a vector of
+ * `(int, texture)` pairs (indicating which textures are to be bound to which uniforms in the shader).
+ */
 inline value invoke_spawn(const std::vector<value> &args, map_visitor &cache, const loc &pos) {
   return handle(
     // check arguments
@@ -197,6 +371,18 @@ inline value invoke_spawn(const std::vector<value> &args, map_visitor &cache, co
   );
 }
 
+/**
+ * @brief Invokes the builtin `spawn*` function.
+ * @param args The arguments from the parser.
+ * @param cache The map visitor cache.
+ * @param pos The position of the call.
+ * @return Either a reference to the spawned instanced object, or an invalid reference.
+ *
+ * The `spawn*` builtin creates a new instanced renderable object from the provided instanced object, shader, and
+ * textures list.
+ * This function expects a `string` (name), an `object*` reference, a `shader` reference, and a vector of
+ * `(int, texture)` pairs (indicating which textures are to be bound to which uniforms in the shader).
+ */
 inline value invoke_spawn_star(const std::vector<value> &args, map_visitor &cache, const loc &pos) {
   return handle(
     // check arguments
@@ -220,6 +406,15 @@ inline value invoke_spawn_star(const std::vector<value> &args, map_visitor &cach
   );
 }
 
+/**
+ * @brief Invokes the builtin `transform_obj` function.
+ * @param args The arguments from the parser.
+ * @param pos The position of the call.
+ * @return A value wrapping `std::monostate`.
+ *
+ * The `transform_obj` builtin sets the position, rotation, and scale of the provided renderable object.
+ * This function expects a `renderable` reference, and three `vec3` arguments (position, rotation, and scale).
+ */
 inline value invoke_transform_obj(const std::vector<value> &args, map_visitor &, const loc &pos) {
   return handle_no_value(
     ready_args<renderer::render_ref, glm::vec3, glm::vec3, glm::vec3>(args, "@transform_obj", pos) |
@@ -233,6 +428,18 @@ inline value invoke_transform_obj(const std::vector<value> &args, map_visitor &,
   );
 }
 
+/**
+ * @brief Invokes the builtin `enable_highlight` function.
+ * @param args The arguments from the parser.
+ * @param cache The map visitor cache.
+ * @param pos The position of the call.
+ * @return A value wrapping `std::monostate`.
+ *
+ * The `enable_highlight` builtin sets the uniforms in the provided shader for highlighting.
+ * This function expects a `shader` reference, and two `string` arguments (the uniform names).
+ * The first of the uniforms is used to bind the highlighting FBO texture, and the second is used to determine if this
+ * object is the main object to be highlighted.
+ */
 inline value invoke_enable_highlight(const std::vector<value> &args, map_visitor &cache, const loc &pos) {
   return handle_no_value(
     ready_args<renderer::shader_ref, std::string, std::string>(args, "@enable_highlight", pos) |
@@ -246,6 +453,18 @@ inline value invoke_enable_highlight(const std::vector<value> &args, map_visitor
   );
 }
 
+/**
+ * @brief Invokes the builtin `enable_highlight*` function.
+ * @param args The arguments from the parser.
+ * @param cache The map visitor cache.
+ * @param pos The position of the call.
+ * @return A value wrapping `std::monostate`.
+ *
+ * The `enable_highlight*` builtin sets the uniforms in the provided shader for instanced highlighting.
+ * This function expects a `shader` reference, and three `string` arguments (the uniform names).
+ * The first of the uniforms is used to bind the highlighting FBO texture, the second is used to determine if this
+ * object is the main object to be highlighted, and the third is used to determine the highlighted instance ID.
+ */
 inline value invoke_enable_highlight_star(const std::vector<value> &args, map_visitor &cache, const loc &pos) {
   return handle_no_value(
     ready_args<renderer::shader_ref, std::string, std::string, std::string>(args, "@enable_highlight*", pos) |
@@ -259,6 +478,16 @@ inline value invoke_enable_highlight_star(const std::vector<value> &args, map_vi
   );
 }
 
+/**
+ * @brief Invokes the builtin `highlight_bind` function.
+ * @param args The arguments from the parser.
+ * @param cache The map visitor cache.
+ * @param pos The position of the call.
+ * @return A value wrapping `std::monostate`.
+ *
+ * The `highlight_bind` builtin sets the texture slot to which the highlighting FBO texture is bound.
+ * This function expects a single `int` argument.
+ */
 inline value invoke_highlight_bind(const std::vector<value> &args, map_visitor &cache, const loc &pos) {
   return handle_no_value(
     ready_arg<int>(args, "@highlight_bind", pos) |
@@ -271,6 +500,15 @@ inline value invoke_highlight_bind(const std::vector<value> &args, map_visitor &
   );
 }
 
+/**
+ * @brief Invokes the builtin `add_collider` function.
+ * @param args The arguments from the parser.
+ * @param pos The position of the call.
+ * @return A value wrapping `std::monostate`.
+ *
+ * The `add_collider` builtin sets the collider for the provided renderable object.
+ * This function expects a `renderable` reference, and a `collider` reference.
+ */
 inline value invoke_add_collider(const std::vector<value> &args, map_visitor &, const loc &pos) {
   return handle_no_value(
     ready_args<renderer::render_ref, renderer::collider_ref>(args, "@add_collider", pos) |
@@ -284,6 +522,15 @@ inline value invoke_add_collider(const std::vector<value> &args, map_visitor &, 
   );
 }
 
+/**
+ * @brief Invokes the builtin `add_collider*` function.
+ * @param args The arguments from the parser.
+ * @param pos The position of the call.
+ * @return A value wrapping `std::monostate`.
+ *
+ * The `add_collider*` builtin sets the collider for the provided instanced renderable object.
+ * This function expects a `instanced_renderable` reference, and a `instanced_collider` reference.
+ */
 inline value invoke_add_collider_star(const std::vector<value> &args, map_visitor &, const loc &pos) {
   return handle_no_value(
     ready_args<renderer::instanced_render_ref, renderer::instanced_collider_ref>(args, "@add_collider*", pos) |
@@ -297,6 +544,15 @@ inline value invoke_add_collider_star(const std::vector<value> &args, map_visito
   );
 }
 
+/**
+ * @brief Invokes the builtin `mix` function.
+ * @param args The arguments from the parser.
+ * @param pos The position of the call.
+ * @return Either a voxel corner, or an invalid voxel corner.
+ *
+ * The `mix` builtin creates a voxel corner from the provided background color, spot color, and blending factor.
+ * This function expects two `vec3` arguments and a `float` argument.
+ */
 inline value invoke_mix(const std::vector<value> &args, map_visitor &, const loc &pos) {
   return handle(
     ready_args<glm::vec3, glm::vec3, float>(args, "@mix", pos),
@@ -304,6 +560,17 @@ inline value invoke_mix(const std::vector<value> &args, map_visitor &, const loc
   );
 }
 
+/**
+ * @brief Invokes the builtin `all` function.
+ * @param args The arguments from the parser.
+ * @param cache The map visitor cache.
+ * @param pos The position of the call.
+ * @return Either a voxel descriptor, or an invalid voxel descriptor.
+ *
+ * The `all` builtin creates a voxel description from the provided voxel corner.
+ * This function expects a single `voxel_corner` argument.
+ * Each of the 9 voxel corners (center and 8 surrounding points) is set to the same value.
+ */
 inline value invoke_all(const std::vector<value> &args, map_visitor &cache, const loc &pos) {
   return handle(
     ready_arg<voxel_corner>(args, "@all", pos) |
@@ -322,6 +589,22 @@ inline value invoke_all(const std::vector<value> &args, map_visitor &cache, cons
   );
 }
 
+/**
+ * @brief Invokes the builtin `perlin` function.
+ * @param args The arguments from the parser.
+ * @param cache The map visitor cache.
+ * @param pos The position of the call.
+ * @return A value wrapping `std::monostate`.
+ *
+ * The `perlin` builtin sets the alpha and beta values for the perlin noise generation.
+ * This function expects 4 sets of `(float, float)` arguments.
+ *
+ * The alpha values are used to set the influence of each octave on the final noise value.
+ * The beta values are used to scale the octaves.
+ * The full formula looks like
+ * \f$\frac{\sum_{i=0}^4 \alpha_i * noise(\beta_i * coord + \delta_i)}{\sum_{i=0}^4 \alpha_i}\f$.
+ * The `delta` values are set using the `seed` function.
+ */
 inline value invoke_perlin(const std::vector<value> &args, map_visitor &cache, const loc &pos) {
   return handle_no_value(
     ready_arg<std::vector<value>>(args, "@perlin", pos) >>
@@ -346,6 +629,17 @@ inline value invoke_perlin(const std::vector<value> &args, map_visitor &cache, c
   );
 }
 
+/**
+ * @brief Invokes the builtin `seed` function.
+ * @param args The arguments from the parser.
+ * @param cache The map visitor cache.
+ * @param pos The position of the call.
+ * @return A value wrapping `std::monostate`.
+ *
+ * The `seed` builtin sets the delta values for the perlin noise generation.
+ * This function expects 4 `float` arguments.
+ * The `delta` values are used to set the offset for each octave; @ref openvtt::map::invoke_perlin.
+ */
 inline value invoke_seed(const std::vector<value> &args, map_visitor &cache, const loc &pos) {
   return handle_no_value(
     ready_args<float, float, float, float>(args, "@seed", pos) |
@@ -361,23 +655,32 @@ inline value invoke_seed(const std::vector<value> &args, map_visitor &cache, con
   );
 }
 
-enum struct builtin {
-  LD_OBJECT, LD_OBJECT_STAR, LD_SHADER, LD_TEXTURE, LD_COLLIDER, LD_COLLIDER_STAR, LD_TRANSFORM,
-  SPAWN, SPAWN_STAR, TRANSFORM_OBJ, ENABLE_HIGHLIGHT, ENABLE_HIGHLIGHT_STAR, HIGHLIGHT_BIND,
-  ADD_COLLIDER, ADD_COLLIDER_STAR,
-  MIX, ALL, PERLIN, SEED
-};
+/**
+ * @brief The type of builtin functions: (const std::vector<value> &, map_visitor &, const loc &) -> value.
+ */
+using builtin_f = value (*)(const std::vector<value> &, map_visitor &, const loc &);
 
+/**
+ * @brief Invokes the required builtin function, if it exists.
+ * @param name The function to be invoked.
+ * @param args The arguments to the function.
+ * @param cache The map visitor cache.
+ * @param pos The position of the call.
+ * @return The return value of the function, or `std::monostate` (void) if the function does not exist.
+ */
 inline value invoke_builtin(const std::string &name, const std::vector<value> &args, map_visitor &cache, const loc &pos) {
-  using enum builtin;
-  const static std::unordered_map<std::string, builtin> builtins {
-    {"@object", LD_OBJECT}, {"@object*", LD_OBJECT_STAR}, {"@shader", LD_SHADER}, {"@texture", LD_TEXTURE},
-    {"@collider", LD_COLLIDER}, {"@collider*", LD_COLLIDER_STAR}, {"@transform", LD_TRANSFORM},
-    {"@spawn", SPAWN}, {"@spawn*", SPAWN_STAR}, {"@transform_obj", TRANSFORM_OBJ},
-    {"@enable_highlight", ENABLE_HIGHLIGHT}, {"@enable_highlight*", ENABLE_HIGHLIGHT_STAR},
-    {"@highlight_bind", HIGHLIGHT_BIND},
-    {"@add_collider", ADD_COLLIDER}, {"@add_collider*", ADD_COLLIDER_STAR},
-    {"@mix", MIX}, {"@all", ALL}, {"@perlin", PERLIN}, {"@seed", SEED}
+  const static std::unordered_map<std::string, builtin_f> builtins {
+    {"@object", invoke_object}, {"@object*", invoke_object_star},
+    {"@shader", invoke_shader}, {"@texture", invoke_texture},
+    {"@collider", invoke_collider}, {"@collider*", invoke_collider_star},
+    {"@transform", invoke_transform},
+    {"@spawn", invoke_spawn}, {"@spawn*", invoke_spawn_star},
+    {"@transform_obj", invoke_transform_obj},
+    {"@enable_highlight", invoke_enable_highlight}, {"@enable_highlight*", invoke_enable_highlight_star},
+    {"@highlight_bind", invoke_highlight_bind},
+    {"@add_collider", invoke_add_collider}, {"@add_collider*", invoke_add_collider_star},
+    {"@mix", invoke_mix}, {"@all", invoke_all},
+    {"@perlin", invoke_perlin}, {"@seed", invoke_seed}
   };
 
   const auto it = builtins.find(name);
@@ -386,29 +689,7 @@ inline value invoke_builtin(const std::string &name, const std::vector<value> &a
     return value{std::monostate{}, pos};
   }
 
-  switch (it->second) {
-    case LD_OBJECT: return invoke_object(args, cache, pos);
-    case LD_OBJECT_STAR: return invoke_object_star(args, cache, pos);
-    case LD_SHADER: return invoke_shader(args, cache, pos);
-    case LD_TEXTURE: return invoke_texture(args, cache, pos);
-    case LD_COLLIDER: return invoke_collider(args, cache, pos);
-    case LD_COLLIDER_STAR: return invoke_collider_star(args, cache, pos);
-    case LD_TRANSFORM: return invoke_transform(args, cache, pos);
-    case SPAWN: return invoke_spawn(args, cache, pos);
-    case SPAWN_STAR: return invoke_spawn_star(args, cache, pos);
-    case TRANSFORM_OBJ: return invoke_transform_obj(args, cache, pos);
-    case ENABLE_HIGHLIGHT: return invoke_enable_highlight(args, cache, pos);
-    case ENABLE_HIGHLIGHT_STAR: return invoke_enable_highlight_star(args, cache, pos);
-    case HIGHLIGHT_BIND: return invoke_highlight_bind(args, cache, pos);
-    case ADD_COLLIDER: return invoke_add_collider(args, cache, pos);
-    case ADD_COLLIDER_STAR: return invoke_add_collider_star(args, cache, pos);
-    case MIX: return invoke_mix(args, cache, pos);
-    case ALL: return invoke_all(args, cache, pos);
-    case PERLIN: return invoke_perlin(args, cache, pos);
-    case SEED: return invoke_seed(args, cache, pos);
-
-    default: OPENVTT_UNREACHABLE;
-  }
+  return it->second(args, cache, pos);
 }
 }
 
