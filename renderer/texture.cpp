@@ -5,7 +5,7 @@
 #include <stb_image.h>
 
 #include "texture.hpp"
-#include "gl_wrapper.hpp"
+#include "gl_macros.hpp"
 #include "filesys.hpp"
 
 using namespace openvtt::renderer;

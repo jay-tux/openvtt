@@ -35,6 +35,9 @@ constexpr const char *gl_status_string(const int gl_error) {
   } \
 while(false)
 
+#define GL_enable(cap) RAW_GL_MACRO((glEnable(cap)), "cap={}", cap)
+#define GL_disable(cap) RAW_GL_MACRO((glDisable(cap)), "cap={}", cap)
+
 #define GL_genVertexArrays(n, arrays) RAW_GL_MACRO((glGenVertexArrays(n, arrays)), "n={}, arrays={}", n, arrays)
 #define GL_bindVertexArray(array) RAW_GL_MACRO((glBindVertexArray(array)), "array={}", array)
 #define GL_deleteVertexArrays(n, arrays) RAW_GL_MACRO((glDeleteVertexArrays(n, arrays)), "n={}, arrays={}", n, arrays)

@@ -4,7 +4,7 @@
 
 // ReSharper disable CppMemberFunctionMayBeStatic
 
-#include "gl_wrapper.hpp"
+#include "gl_macros.hpp"
 
 #include <stdexcept>
 #include <imgui.h>

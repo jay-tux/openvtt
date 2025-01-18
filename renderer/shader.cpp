@@ -6,7 +6,7 @@
 #include <sstream>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "gl_wrapper.hpp"
+#include "gl_macros.hpp"
 #include "window.hpp"
 #include "log_view.hpp"
 #include "filesys.hpp"

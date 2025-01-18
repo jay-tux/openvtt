@@ -112,6 +112,19 @@ template <log_type type>
 inline void log(const std::string &source, const std::string &message) {
   logger << log_message{source, message, type};
 }
+
+/**
+ * @brief Logs a formatted message with the given source.
+ * @tparam type The type of the log message.
+ * @tparam Args The types of the arguments to be formatted.
+ * @param source The source of the log message.
+ * @param fmt The format string.
+ * @param args The arguments to be formatted.
+ */
+template <log_type type, typename ... Args> requires(sizeof...(Args) > 0)
+inline void log(const std::string &source, const std::format_string<Args...> &fmt, Args &&... args) {
+  logger << log_message{source, std::format(fmt, std::forward<Args &&>(args)...), type};
+}
 }
 
 #endif //LOG_VIEW_HPP

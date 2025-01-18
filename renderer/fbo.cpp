@@ -6,7 +6,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "gl_wrapper.hpp"
+#include "gl_macros.hpp"
 #include "fbo.hpp"
 
 using namespace openvtt::renderer;

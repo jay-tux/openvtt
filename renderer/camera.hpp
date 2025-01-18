@@ -21,7 +21,7 @@ namespace openvtt::renderer {
  * (along the forward vector, projected on the XZ plane), and zooming (translation along the actual forward vector).
  */
 struct camera {
-  glm::vec3 position{0,3,-5}; //!< The position of the camera.
+  glm::vec3 position{0,3,5}; //!< The position of the camera.
   glm::vec3 forward = normalize(glm::vec3{0,0,0} - position); //!< The forward vector of the camera.
   // glm::vec3 up{0,1,0}; // up is always positive Y
   float speed = 1.0f; //!< The movement speed of the camera.

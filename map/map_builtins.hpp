@@ -9,6 +9,7 @@
 #include "object_cache.hpp"
 #include "map_visitor.hpp"
 #include "renderer/log_view.hpp"
+#include "scanline.hpp"
 
 /**
  * @brief Namespace for map parsing.
@@ -655,6 +656,38 @@ inline value invoke_seed(const std::vector<value> &args, map_visitor &cache, con
   );
 }
 
+inline value invoke_axes(const std::vector<value> &args, map_visitor &cache, const loc &pos) {
+  return handle_no_value(
+    ready_arg<bool>(args, "@axes", pos) |
+    [&cache](const bool &draw) {
+      cache.show_axes = draw;
+      return std::monostate{};
+    }, pos
+  );
+}
+
+inline value invoke_region(const std::vector<value> &args, map_visitor &, const loc &pos) {
+  return handle(
+    ready_arg<std::vector<value>>(args, "@region", pos) >> [&pos](const std::vector<value> &pts) -> or_error<std::vector<std::pair<int, int>>> {
+      std::vector<std::pair<int, int>> res;
+      res.reserve(pts.size());
+      for (const auto &x: pts) {
+        if (const auto y = x.expecting<int, int>(); y.has_value()) res.push_back(*y);
+        else return left("@region expects a list of integer pairs (at " + pos.str());
+      }
+      return right(res);
+    } | [&pos](const std::vector<std::pair<int, int>> &pts) -> std::vector<value> {
+      using namespace renderer;
+      const auto fill = scanline_fill(pts);
+      return map_vec(fill, [&pos](const std::pair<int, int> &p) -> value {
+        return value{ value_pair{ value{p.first, pos}, value{p.second, pos} }, pos };
+      });
+    },
+    pos,
+    std::vector<value>{}
+  );
+}
+
 /**
  * @brief The type of builtin functions: (const std::vector<value> &, map_visitor &, const loc &) -> value.
  */
@@ -680,12 +713,13 @@ inline value invoke_builtin(const std::string &name, const std::vector<value> &a
     {"@highlight_bind", invoke_highlight_bind},
     {"@add_collider", invoke_add_collider}, {"@add_collider*", invoke_add_collider_star},
     {"@mix", invoke_mix}, {"@all", invoke_all},
-    {"@perlin", invoke_perlin}, {"@seed", invoke_seed}
+    {"@perlin", invoke_perlin}, {"@seed", invoke_seed},
+    {"@axes", invoke_axes}, {"@region", invoke_region}
   };
 
   const auto it = builtins.find(name);
   if (it == builtins.end()) {
-    renderer::log<renderer::log_type::WARNING>("map_loader", std::format("Unknown builtin function {} at {}.", name, pos.str()));
+    renderer::log<renderer::log_type::ERROR>("map_loader", std::format("Unknown builtin function {} at {}.", name, pos.str()));
     return value{std::monostate{}, pos};
   }
 

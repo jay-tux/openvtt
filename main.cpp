@@ -9,6 +9,7 @@
 #include "renderer/hover_highlighter.hpp"
 
 #include "map/map_parser.hpp"
+#include "renderer/gizmos.hpp"
 
 using namespace openvtt::map;
 using namespace openvtt::renderer;
@@ -25,7 +26,8 @@ int main(int argc, const char **argv) {
     requires_instanced_highlight,
     highlight_binding,
     voxels,
-    perlin_scale
+    perlin_scale,
+    enable_axes
   ] = map_desc::parse_from("examples/suzannes");
   log<log_type::DEBUG>("main", std::format("Map has {} voxel groups.", voxels.size()));
 
@@ -100,6 +102,8 @@ int main(int argc, const char **argv) {
 
   using highlighter = hover_highlighter;
 
+  axes ax{};
+
   while (!win.should_close()) {
     if (!win.frame_pre()) continue;
 
@@ -140,7 +144,12 @@ int main(int argc, const char **argv) {
 
     cache::draw_colliders(cam);
 
-    fps_counter::render();
+    if (enable_axes) ax.draw(cam);
+
+    const auto mouse = cache::mouse_y0(cam);
+    ax.draw(cam, {mouse.x, 0, mouse.y}, 0.25f);
+
+    fps_counter::render(mouse);
     log_view::render();
     cam.render_controls();
     cache::detail_window();

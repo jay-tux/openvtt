@@ -10,13 +10,15 @@ COMMENT: '//' ~[\r\n]* -> skip;
 
 program: voxels=voxelSpec objects=objectsSpec | objects=objectsSpec voxels=voxelSpec;
 
-voxelSpec: 'voxels' '(' w=INT ',' h=INT ',' scale=(INT|FLOAT) ')' '{' body+=voxelBlock* '}';
+voxelSpec: 'voxels' '(' scale=(INT|FLOAT) ')' '{' body+=voxelBlock* '}';
 
 objectsSpec: 'objects' '{' body+=objStmt* '}';
 
 exprList: exprs+=expr (',' exprs+=expr)*;
 
 expr: x=IDENTIFIER                                  #idExpr
+    | 'true'                                        #trueExpr
+    | 'false'                                       #falseExpr
     | x=INT                                         #intExpr
     | x=FLOAT                                       #floatExpr
     | x=STRING                                      #stringExpr
@@ -35,5 +37,6 @@ voxelStmt: e=expr ';'                               #vExprStmt
     ;
 
 voxelBlock: s=voxelStmt                             #stmtBlock
-    | 'default' '{' body+=voxelStmt* '}'            #defaultBlock
+    | 'region' '(' r=expr ')' '{' body+=voxelStmt* '}'
+                                                    #regionBlock
     ;

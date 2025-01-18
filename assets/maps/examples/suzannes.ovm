@@ -1,12 +1,15 @@
-voxels(25, 25, 10) {
+voxels(10) {
     background = (188,183,153);
     spots = (49,17,10);
     palette = @mix(background, spots, 1);
     octaves = [(1, 1), (0.5, 2), (0.25, 4), (0.125, 8)];
-    default {
-        @all(palette);
+
+    bottom_right = @region([(5, 2), (2, 5), (5, 5)]);
+    back_region = (25, 183, 67);
+    region(bottom_right) {
+        @all(@mix(back_region, spots, 0.33));
         @perlin(octaves);
-        @seed(0, -0.4512, 0.5701, 0.0519);
+        @seed(0, -0.8123, 0.98, 0.0984);
     }
 }
 
@@ -49,4 +52,6 @@ objects {
 
     @add_collider(suzanne, monkey = @collider("suzanne_collider"));
     @add_collider*(monkeys, @collider*("suzanne_collider", monkey_ts));
+
+    @axes(true);
 }

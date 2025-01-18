@@ -80,13 +80,12 @@ struct map_visitor final : mapVisitor {
   std::unordered_map<renderer::shader_ref, single_highlight> requires_highlight{}; //!< The renderable objects that require highlighting.
   std::unordered_map<renderer::shader_ref, instanced_highlight> requires_instanced_highlight{}; //!< The instanced renderable objects that require highlighting.
   std::optional<int> highlight_binding{}; //!< The texture slot to which the highlighting FBO texture is bound.
-  voxel default_voxel{}; //!< The default voxel.
-  std::pair<int, int> map_size; //!< The size of the map.
   float perlin_scale; //!< The scale for the perlin noise generation.
   std::unordered_map<std::pair<int, int>, size_t> set_voxels{}; //!< The set of overridden voxels (the index of the voxel in the `voxels` vector).
   std::vector<std::pair<voxel, std::vector<glm::vec2>>> voxels{}; //!< The values of the voxels.
   voxel voxel_in_progress{}; //!< The voxel being constructed.
   bool default_set = false; //!< Whether the default voxel has been set.
+  bool show_axes = false; //!< Whether to show the axes.
 
   /**
    * @brief Searches the context stack for a variable.
@@ -313,6 +312,10 @@ struct map_visitor final : mapVisitor {
 
   std::any visitIdExpr(mapParser::IdExprContext *context) override; //!< Visitor for the `idExpr` alternative.
 
+  std::any visitTrueExpr(mapParser::TrueExprContext *context) override; //!< Visitor for the `trueExpr` alternative.
+
+  std::any visitFalseExpr(mapParser::FalseExprContext *context) override; //!< Visitor for the `falseExpr` alternative.
+
   std::any visitIntExpr(mapParser::IntExprContext *context) override; //!< Visitor for the `intExpr` alternative.
 
   std::any visitFloatExpr(mapParser::FloatExprContext *context) override; //!< Visitor for the `floatExpr` alternative.
@@ -337,7 +340,7 @@ struct map_visitor final : mapVisitor {
 
   std::any visitStmtBlock(mapParser::StmtBlockContext *context) override; //!< Visitor for the `stmtBlock` alternative.
 
-  std::any visitDefaultBlock(mapParser::DefaultBlockContext *context) override; //!< Visitor for the `defaultBlock` alternative.
+  std::any visitRegionBlock(mapParser::RegionBlockContext *context) override; //!< Visitor for the `regionBlock` alternative.
 
   /**
    * @brief Cleans up the map visitor.

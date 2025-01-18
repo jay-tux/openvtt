@@ -22,10 +22,6 @@ std::any map_visitor::visitVoxelSpec(mapParser::VoxelSpecContext *context) {
   }
   context_stack.pop_back();
 
-  map_size = {
-    std::stoi(context->w->getText()),
-    std::stoi(context->h->getText())
-  };
   perlin_scale = std::stof(context->scale->getText());
 
   return no_value{at(*context)};
@@ -51,6 +47,14 @@ std::any map_visitor::visitExprList(mapParser::ExprListContext *context) {
 
 std::any map_visitor::visitIdExpr(mapParser::IdExprContext *context) {
   return identifier{context->x->getText()};
+}
+
+std::any map_visitor::visitTrueExpr(mapParser::TrueExprContext *context) {
+  return value{true, at(*context)};
+}
+
+std::any map_visitor::visitFalseExpr(mapParser::FalseExprContext *context) {
+  return value{false, at(*context)};
 }
 
 std::any map_visitor::visitIntExpr(mapParser::IntExprContext *context) {
@@ -118,10 +122,21 @@ std::any map_visitor::visitVExprStmt(mapParser::VExprStmtContext *context) {
   return no_value{at(*context)}; // no reasonable return value possible
 }
 
-std::any map_visitor::visitDefaultBlock(mapParser::DefaultBlockContext *context) {
-  if (default_set) {
-    log<log_type::WARNING>("map_parser", std::format("Default voxel has already been set (attempt to set at {}).", at(*context).str()));
-    return no_value{at(*context)};
+std::any map_visitor::visitRegionBlock(mapParser::RegionBlockContext *context) {
+  const auto x = visit_expect<std::vector<value>>(context->r, at(*context));
+  std::vector<glm::vec2> region;
+  std::unordered_set<std::pair<int, int>> set;
+  region.reserve(x.size());
+  for (const auto &p: x) {
+    if (const auto checked = p.expecting<int, int>(); checked.has_value()) {
+      if (set.contains(*checked) || set_voxels.contains(*checked)) {
+        log<log_type::WARNING>("map_parser", std::format("Voxel at ({}, {}) has already been set (ignoring attempt at {}).", checked->first, checked->second, at(*context).str()));
+      }
+      else {
+        region.emplace_back(checked->first, checked->second);
+        set.insert(*checked);
+      }
+    }
   }
 
   voxel_in_progress = {};
@@ -129,10 +144,15 @@ std::any map_visitor::visitDefaultBlock(mapParser::DefaultBlockContext *context)
     visit_through(stmt, at(*context));
   }
 
-  default_voxel = voxel_in_progress;
-  default_set = true;
+  voxels.emplace_back(voxel_in_progress, region);
+  const size_t idx = voxels.size() - 1;
+  for (const auto &p: set) {
+    set_voxels[p] = idx;
+  }
+
   return no_value{at(*context)};
 }
+
 
 std::any map_visitor::visitStmtBlock(mapParser::StmtBlockContext *context) {
   visit_through(context->s, at(*context));

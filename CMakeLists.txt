@@ -86,6 +86,7 @@ add_executable(openvtt
         map/map_parser.cpp
         map/map_visitor.cpp
         map/object_cache.cpp
+        renderer/gizmos.cpp
 )
 
 target_compile_definitions(openvtt PRIVATE

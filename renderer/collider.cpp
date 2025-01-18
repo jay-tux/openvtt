@@ -2,7 +2,7 @@
 // Created by jay on 12/2/24.
 //
 
-#include "gl_wrapper.hpp"
+#include "gl_macros.hpp"
 #include "collider.hpp"
 #include "filesys.hpp"
 

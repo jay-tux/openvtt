@@ -38,6 +38,7 @@ struct map_desc {
   std::optional<int> highlight_binding; //!< The texture slot to which the highlighting FBO texture is bound.
   std::vector<renderer::voxel_ref> voxels; //!< All the voxels for the scene background.
   float perlin_scale; //!< The scale for the perlin noise generation.
+  bool show_axes; //!< Whether to show the axes' gizmo.
 
   /**
    * @brief Parses a map from an asset file.

@@ -120,7 +120,7 @@ using voxel_desc = std::array<voxel_corner, 9>; //!< Type alias for a voxel desc
  * @brief Concept representing a valid value type.
  */
 template <typename T>
-concept valid_value = std::same_as<T, int> || std::same_as<T, float> || std::same_as<T, std::string> ||
+concept valid_value = std::same_as<T, bool> || std::same_as<T, int> || std::same_as<T, float> || std::same_as<T, std::string> ||
   std::same_as<T, glm::vec3>  || std::same_as<T, glm::mat4> || std::same_as<T, renderer::object_ref> ||
   std::same_as<T, renderer::instanced_object_ref> || std::same_as<T, renderer::shader_ref> ||
   std::same_as<T, renderer::texture_ref> || std::same_as<T, renderer::collider_ref> ||
@@ -136,6 +136,7 @@ concept valid_value = std::same_as<T, int> || std::same_as<T, float> || std::sam
  */
 template <valid_value T>
 constexpr std::string type_name() {
+  if constexpr(std::same_as<T, bool>) return "bool";
   if constexpr(std::same_as<T, int>) return "int";
   if constexpr(std::same_as<T, float>) return "float";
   if constexpr(std::same_as<T, std::string>) return "string";
@@ -235,7 +236,63 @@ public:
   }
 
   template <valid_value T>
+  [[nodiscard]] constexpr std::optional<T> cast_maybe() const {
+    if (is<T>()) return as<T>();
+    if constexpr (std::same_as<T, float>) {
+      if (is<int>()) return static_cast<float>(as<int>());
+    }
+    return std::nullopt;
+  }
+
+  template <valid_value T>
   [[nodiscard]] inline T should_be() const;
+
+  /**
+   * @brief Attempts to force a value into a certain type.
+   * @tparam T The target type.
+   * @return The value as the target type, or the default value for that type.
+   *
+   * If the value is not of the target type, an error message is logged, and `std::nullopt` is returned.
+   * Otherwise, the value is returned as the target type.
+   */
+  template <valid_value T>
+  [[nodiscard]] constexpr std::optional<T> expecting() const {
+    if (is<T>()) return as<T>();
+    if constexpr (std::same_as<T, float>) {
+      if (is<int>()) return static_cast<float>(as<int>());
+    }
+
+    renderer::log<renderer::log_type::ERROR>("object_cache",
+      std::format("Expected value of type {}, but got value of type {} at {}",
+        map::type_name<T>(), type_name(), generated.str()
+      )
+    );
+    return std::nullopt;
+  }
+
+  template <valid_value T1, valid_value T2>
+  [[nodiscard]] constexpr std::optional<std::pair<T1, T2>> expecting() const {
+    if (is<value_pair>()) {
+      const auto &[x, y] = as<value_pair>().as_pair();
+      const auto x_m = x.cast_maybe<T1>();
+      const auto y_m = y.cast_maybe<T2>();
+      if (x_m.has_value() && y_m.has_value()) return std::pair{*x_m, *y_m};
+
+      renderer::log<renderer::log_type::ERROR>("object_cache",
+        std::format("Expected a pair ({}, {}), but got ({}, {}) instead at {}",
+          map::type_name<T1>(), map::type_name<T2>(), x.type_name(), y.type_name(), generated.str()
+        )
+      );
+      return std::nullopt;
+    }
+
+    renderer::log<renderer::log_type::ERROR>("object_cache",
+      std::format("Expected a pair ({}, {}), but got {} instead at {}",
+        map::type_name<T1>(), map::type_name<T2>(), type_name(), generated.str()
+      )
+    );
+    return std::nullopt;
+  }
 
   /**
    * @brief Gets the location of the value.
@@ -245,7 +302,7 @@ public:
 
 private:
   using var_t = std::variant<
-    int, float, std::string, glm::vec3, glm::mat4,
+    bool, int, float, std::string, glm::vec3, glm::mat4,
     renderer::object_ref, renderer::instanced_object_ref, renderer::shader_ref, renderer::texture_ref,
     renderer::collider_ref, renderer::instanced_collider_ref, renderer::render_ref, renderer::instanced_render_ref,
     voxel_corner, voxel_desc,
@@ -261,6 +318,7 @@ private:
  * @tparam T The valid value type.
  */
 template <valid_value T> struct default_value;
+template <> struct default_value<bool> { static constexpr bool value = false; };
 template <> struct default_value<int> { static constexpr int value = 0; };
 template <> struct default_value<float> { static constexpr float value = 0.0f; };
 template <> struct default_value<std::string> { static constexpr std::string value{}; };
@@ -298,17 +356,7 @@ inline T default_value_v = default_value<T>::value;
  */
 template<valid_value T>
 T value::should_be() const {
-  if (is<T>()) return as<T>();
-  if constexpr(std::same_as<T, float>) {
-    if (is<int>()) return static_cast<float>(as<int>());
-  }
-
-  renderer::log<renderer::log_type::ERROR>("object_cache",
-    std::format("Expected value of type {}, but got value of type {} at {}",
-      map::type_name<T>(), type_name(), generated.str()
-    )
-  );
-  return default_value_v<T>;
+  return expecting<T>().value_or(default_value_v<T>);
 }
 
 /**

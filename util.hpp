@@ -153,6 +153,24 @@ inline std::string demangle(const char *name) {
   return {name};
 #endif
 }
+
+/**
+ * @brief Maps a function over a vector, returning a new vector.
+ * @tparam T The type of the input vector.
+ * @tparam F The type of the function to apply (should have the signature `(const T &) -> U`.
+ * @param vec The input vector.
+ * @param f The function to apply.
+ * @return A new vector, containing the results of applying `f` to each element of `vec`.
+ */
+template <typename T, std::invocable<const T &> F>
+constexpr auto map_vec(const std::vector<T> &vec, F &&f) -> std::vector<std::invoke_result_t<F, const T &>> {
+  using U = std::invoke_result_t<F, const T &>;
+  std::vector<U> res;
+  res.reserve(vec.size());
+  for (const auto &x : vec) res.push_back(f(x));
+  return res;
+}
+
 }
 
 #ifdef OPENVTT_DEBUG

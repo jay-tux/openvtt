@@ -217,6 +217,12 @@ public:
   static void draw_colliders(const camera &cam);
 
   /**
+   * @brief Gets the mouse position in world coordinates, projected onto the XZ plane.
+   * @return The mouse position in world coordinates.
+   */
+  static glm::vec2 mouse_y0(const camera &cam);
+
+  /**
    * @brief Placeholder type indicating no collision.
    */
   struct no_collision{};
