@@ -53,12 +53,19 @@ map_desc map_desc::parse_from(const std::string &asset) {
     visitor.requires_instanced_highlight.clear();
   }
 
+  const auto [x, y] = visitor.map_size;
+  if (x <= 0 || y <= 0) {
+    log<log_type::ERROR>("map_parser", "Map size must be greater than 0.");
+    return {};
+  }
+  const glm::vec2 offset{ -static_cast<float>(x) / 2, -static_cast<float>(y) / 2 };
+
   std::vector<glm::vec2> defaulted;
   std::vector<voxel_ref> voxels;
   const auto [w, h] = visitor.map_size;
   for (int i = 0; i < w; i++) {
     for (int j = 0; j < h; j++) {
-      if (!visitor.set_voxels.contains({i, j})) defaulted.emplace_back(i, j);
+      if (!visitor.set_voxels.contains({i, j})) defaulted.emplace_back(glm::vec2{i, j} + offset);
     }
   }
 
@@ -84,6 +91,7 @@ map_desc map_desc::parse_from(const std::string &asset) {
       tiers[i] = glm::vec3(alpha[i], beta[i], delta[i]);
     }
 
+    for (auto &p : pos) p += offset;
     voxels.push_back(render_cache::construct<voxel_group>(back, spot, fac, pos, tiers));
   }
 
