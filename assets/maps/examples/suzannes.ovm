@@ -6,15 +6,63 @@ voxels(5) {
 
     bottom_left = @region([(5, 2), (2, 5), (5, 5)]);
     back_region = (25, 103, 67);
+    // main corner ~ X
     region(bottom_left) {
         @all(@mix(back_region, spots, 0.33));
         @perlin(octaves);
         @seed(0, -0.8123, 0.98, 0.0984);
     }
-    surrounding = @border(bottom_left, 2);
+
     back_surrounding = (25, 183, 67);
-    region(surrounding) {
-        @all(@mix(back_surrounding, spots, 0.33));
+    gradient = @mix(back_surrounding, spots, 1);
+    crn = @mix(back_region, spots, 0.33);
+
+    // Y
+    region([(4,2), (3,3), (2,4)]) {
+        @all(gradient);
+        for(corner in ["br", "bc", "bl", "cr", "tr", "c"]) {
+            @corner(corner, crn);
+        }
+        @perlin(octaves);
+        @seed(0, -0.8123, 0.98, 0.0984);
+    }
+
+    // Z
+    region([(1,5)]) {
+        @all(gradient);
+        for(corner in ["tr", "cr", "br"]) {
+            @corner(corner, crn);
+        }
+        @perlin(octaves);
+        @seed(0, -0.8123, 0.98, 0.0984);
+    }
+
+    // A
+    region([(2,6), (3,6), (4,6)]) {
+        @all(gradient);
+        for(corner in ["tl", "tc", "tr"]) {
+            @corner(corner, crn);
+        }
+        @perlin(octaves);
+        @seed(0, -0.8123, 0.98, 0.0984);
+    }
+
+    // B
+    region([(6,2), (5,4), (5,5)]) {
+        @all(gradient);
+        for(corner in ["tl", "cl", "bl"]) {
+            @corner(corner, crn);
+        }
+        @perlin(octaves);
+        @seed(0, -0.8123, 0.98, 0.0984);
+    }
+
+    // C
+    region([(5,3)]) {
+        @all(crn);
+        @corner("br", gradient);
+        @corner("bc", gradient);
+        @corner("c", gradient);
         @perlin(octaves);
         @seed(0, -0.8123, 0.98, 0.0984);
     }
@@ -62,3 +110,13 @@ objects {
 
     @axes(true);
 }
+
+/*
+    1  2  3  4  5  6
+ 1
+ 2           Y  X  B
+ 3        Y  X  C
+ 4     Y  X  X  B
+ 5  Z  X  X  X  B
+ 6     A  A  A
+*/

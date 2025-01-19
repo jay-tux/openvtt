@@ -179,6 +179,25 @@ std::any map_visitor::visitVExprStmt(mapParser::VExprStmtContext *context) {
   return no_value{at(*context)}; // no reasonable return value possible
 }
 
+std::any map_visitor::visitBlockStmt(mapParser::BlockStmtContext *context) {
+  with_new_context([this, context] {
+    for (const auto &stmt: context->body)
+      visit_through(stmt, at(*context));
+  });
+  return no_value{at(*context)};
+}
+
+std::any map_visitor::visitForStmt(mapParser::ForStmtContext *context) {
+  const auto id = context->x->getText();
+  for (const auto &v: visit_expect<std::vector<value>>(context->range, at(*context))) {
+    with_new_context([this, context, &id, &v] {
+      context_stack.back().assign(id, value{v}, at(*context), false);
+      visit_through(context->body, at(*context));
+    });
+  }
+  return no_value{at(*context)};
+}
+
 std::any map_visitor::visitRegionBlock(mapParser::RegionBlockContext *context) {
   const auto x = visit_expect<std::vector<value>>(context->r, at(*context));
   std::vector<glm::vec2> region;

@@ -308,6 +308,20 @@ struct map_visitor final : mapVisitor {
   }
 
   /**
+   * @brief Invokes the given lambda with a new stack slot.
+   * @tparam F The lambda type.
+   * @param f The lambda to invoke.
+   *
+   * This function creates a new stack slot, invokes the lambda, and then pops the stack slot.
+   */
+  template <std::invocable<> F>
+  constexpr void with_new_context(F &&f) {
+    context_stack.emplace_back();
+    f();
+    context_stack.pop_back();
+  }
+
+  /**
    * @brief Invokes the given lambda in a new scope.
    * @tparam s The scope to open.
    * @tparam F The lambda type.
@@ -318,7 +332,7 @@ struct map_visitor final : mapVisitor {
    * A new context is pushed onto the (empty) stack, giving the lambda a fresh context to work with.
    */
   template <scope s, std::invocable<> F>
-  void with_scope(F &&f) {
+  constexpr void with_scope(F &&f) {
     if (current_scope != scope::NONE) {
       renderer::log<renderer::log_type::ERROR>("map_parser", "Can't open a new scope while in another scope.");
       return;
@@ -330,9 +344,7 @@ struct map_visitor final : mapVisitor {
 
     current_scope = s;
     context_stack.clear();
-    context_stack.emplace_back();
-    f();
-    context_stack.pop_back();
+    with_new_context([&f] { f(); });
     current_scope = scope::NONE;
   }
 
@@ -381,6 +393,10 @@ struct map_visitor final : mapVisitor {
   std::any visitExprStmt(mapParser::ExprStmtContext *context) override; //!< Visitor for the `exprStmt` alternative.
 
   std::any visitVExprStmt(mapParser::VExprStmtContext *context) override; //!< Visitor for the `vExprStmt` alternative.
+
+  std::any visitBlockStmt(mapParser::BlockStmtContext *context) override; //!< Visitor for the `blockStmt` alternative.
+
+  std::any visitForStmt(mapParser::ForStmtContext *context) override; //!< Visitor for the `forStmt` alternative.
 
   std::any visitStmtBlock(mapParser::StmtBlockContext *context) override; //!< Visitor for the `stmtBlock` alternative.
 

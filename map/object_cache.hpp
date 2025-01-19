@@ -738,7 +738,7 @@ public:
    */
   std::optional<value> lookup_var_maybe(const std::string &name) const {
     const auto it = ctx.find(name);
-    return it == ctx.end() ? std::nullopt : std::optional{it->second.first};
+    return it == ctx.end() ? std::nullopt : std::optional{it->second.val};
   }
 
   /**
@@ -794,16 +794,23 @@ public:
    * @param name The name of the variable.
    * @param val The value to assign.
    * @param at The location where the assignment is made.
+   * @param is_mut Whether the variable is mutable.
    *
    * If the variable does not exist, it is created (declared).
    * If the variable exists, it is overwritten if the types match.
    * If the variable exists, but the types don't match, an error message is logged.
    */
   template <valid_value T>
-  void assign(const std::string &name, T val, const loc &at) {
+  void assign(const std::string &name, T val, const loc &at, const bool is_mut = true) {
     if (const auto it = ctx.find(name); it != ctx.end()) {
-      if (const auto &[old, declared] = it->second; old.is<T>()) {
-        ctx[name] = {value{std::move(val), at}, at};
+      if (const auto &[old, declared, mut] = it->second; old.is<T>()) {
+        if (!mut) {
+          renderer::log<renderer::log_type::ERROR>("object_cache",
+            std::format("Variable {} is immutable, cannot assign at {}", name, at.str())
+          );
+          return;
+        }
+        ctx[name] = {value{std::move(val), at}, at, mut};
       }
       else {
         renderer::log<renderer::log_type::ERROR>("object_cache",
@@ -814,7 +821,7 @@ public:
       }
     }
     else {
-      ctx[name] = {value{std::forward<T>(val), at}, at};
+      ctx[name] = {value{std::forward<T>(val), at}, at, is_mut};
     }
   }
 
@@ -823,15 +830,17 @@ public:
    * @param name The name of the variable.
    * @param val The value to assign.
    * @param at The location where the assignment is made.
+   * @param is_mut Whether the variable is mutable.
    *
    * This function is a wrapper around `assign` that forwards the value to the correct overload.
    */
-  void assign(const std::string &name, value &&val, const loc &at) {
-    val.visit([this, &name, &at]<typename T>(T &&t) { assign(name, t, at); });
+  void assign(const std::string &name, value &&val, const loc &at, const bool is_mut = true) {
+    val.visit([this, &name, &at, is_mut]<typename T>(T &&t) { assign(name, t, at, is_mut); });
   }
 
 private:
-  std::unordered_map<std::string, std::pair<value, loc>> ctx;
+  struct var { value val; loc declared; bool is_mut; };
+  std::unordered_map<std::string, var> ctx;
 };
 }
 

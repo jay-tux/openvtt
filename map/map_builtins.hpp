@@ -611,6 +611,20 @@ inline value invoke_mix(const std::vector<value> &args, map_visitor &v, const lo
   );
 }
 
+constexpr voxel_desc from_current(const map_visitor &cache) {
+  return voxel_desc {
+    std::tuple{ cache.voxel_in_progress.back[0], cache.voxel_in_progress.spot[0], cache.voxel_in_progress.fac[0] },
+    std::tuple{ cache.voxel_in_progress.back[1], cache.voxel_in_progress.spot[1], cache.voxel_in_progress.fac[1] },
+    std::tuple{ cache.voxel_in_progress.back[2], cache.voxel_in_progress.spot[2], cache.voxel_in_progress.fac[2] },
+    std::tuple{ cache.voxel_in_progress.back[3], cache.voxel_in_progress.spot[3], cache.voxel_in_progress.fac[3] },
+    std::tuple{ cache.voxel_in_progress.back[4], cache.voxel_in_progress.spot[4], cache.voxel_in_progress.fac[4] },
+    std::tuple{ cache.voxel_in_progress.back[5], cache.voxel_in_progress.spot[5], cache.voxel_in_progress.fac[5] },
+    std::tuple{ cache.voxel_in_progress.back[6], cache.voxel_in_progress.spot[6], cache.voxel_in_progress.fac[6] },
+    std::tuple{ cache.voxel_in_progress.back[7], cache.voxel_in_progress.spot[7], cache.voxel_in_progress.fac[7] },
+    std::tuple{ cache.voxel_in_progress.back[8], cache.voxel_in_progress.spot[8], cache.voxel_in_progress.fac[8] }
+  };
+}
+
 /**
  * @brief Invokes the builtin `all` function.
  * @param args The arguments from the parser.
@@ -634,10 +648,52 @@ inline value invoke_all(const std::vector<value> &args, map_visitor &cache, cons
         cache.voxel_in_progress.fac[i] = fac;
       }
 
-      return voxel_desc{crn, crn, crn, crn, crn, crn, crn, crn, crn};
+      return from_current(cache);
     },
 
     pos, voxel_desc{}
+  );
+}
+
+const static std::unordered_map<std::string, int> indices {
+          {"tl", 0}, {"tc", 1}, {"tr", 2},
+          {"cl", 3}, {"c",  4}, {"cr", 5},
+          {"bl", 6}, {"bc", 7}, {"br", 8}
+};
+
+inline value invoke_corner(const std::vector<value> &args, map_visitor &cache, const loc &pos) {
+  return handle(
+    requires_scope<map_visitor::scope::VOXEL>("@corner", cache, pos) >>
+    [&args, &pos] { return ready_args<std::string, voxel_corner>(args, "@corner", pos); } >>
+    [&cache, &pos](const std::pair<std::string, voxel_corner> &desc) -> or_error<voxel_desc> {
+      const auto &[which, corner] = desc;
+      const auto &[back, spot, fac] = corner;
+      if (const auto it = indices.find(which); it != indices.end()) {
+        cache.voxel_in_progress.back[it->second] = back;
+        cache.voxel_in_progress.spot[it->second] = spot;
+        cache.voxel_in_progress.fac[it->second] = fac;
+        return right(from_current(cache));
+      }
+      return left(std::format("Invalid corner descriptor '{}' at {}.", which, pos.str()));
+    },
+
+    pos, voxel_desc{}
+  );
+}
+
+inline value invoke_get_corner(const std::vector<value> &args, map_visitor &v, const loc &pos) {
+  return handle(
+    requires_scope<map_visitor::scope::VOXEL>("@get_corner", v, pos) >>
+    [&args, &pos] { return ready_args<std::string, voxel_desc>(args, "@get_corner", pos); } >>
+    [&pos](const std::pair<std::string, voxel_desc> &as) -> or_error<voxel_corner> {
+      const auto &[which, desc] = as;
+      if (const auto it = indices.find(which); it != indices.end()) {
+        return right(desc[it->second]);
+      }
+      return left(std::format("Invalid corner descriptor '{}' at {}.", which, pos.str()));
+    },
+
+    pos, voxel_corner{}
   );
 }
 
@@ -721,7 +777,7 @@ inline value invoke_seed(const std::vector<value> &args, map_visitor &cache, con
  */
 inline value invoke_axes(const std::vector<value> &args, map_visitor &cache, const loc &pos) {
   return handle_no_value(
-    requires_scope<map_visitor::scope::VOXEL>("@axes", cache, pos) >>
+    requires_scope<map_visitor::scope::OBJECTS>("@axes", cache, pos) >>
     [&args, &pos] { return ready_arg<bool>(args, "@axes", pos); } |
     [&cache](const bool &draw) {
       cache.show_axes = draw;
@@ -845,7 +901,7 @@ inline value invoke_builtin(const std::string &name, const std::vector<value> &a
     {"@enable_highlight", invoke_enable_highlight}, {"@enable_highlight*", invoke_enable_highlight_star},
     {"@highlight_bind", invoke_highlight_bind},
     {"@add_collider", invoke_add_collider}, {"@add_collider*", invoke_add_collider_star},
-    {"@mix", invoke_mix}, {"@all", invoke_all},
+    {"@mix", invoke_mix}, {"@all", invoke_all}, {"@corner", invoke_corner}, {"@get_corner", invoke_get_corner},
     {"@perlin", invoke_perlin}, {"@seed", invoke_seed},
     {"@axes", invoke_axes}, {"@region", invoke_region}, {"@border", invoke_border},
     {"@print", invoke_print}

@@ -170,24 +170,32 @@ instanced_object::~instanced_object() {
   GL_deleteBuffers(1, &model_inv_t_vbo);
 }
 
-constexpr static glm::vec2 positions[9] {
+constexpr static float sqd4 = std::sqrt(2.0f) / 6.0f;
+constexpr static glm::vec2 positions[13] {
   {-0.5f, -0.5f}, {0.0f, -0.5f}, {0.5f, -0.5f},
   {-0.5f,  0.0f}, {0.0f,  0.0f}, {0.5f,  0.0f},
-  {-0.5f,  0.5f}, {0.0f,  0.5f}, {0.5f,  0.5f}
+  {-0.5f,  0.5f}, {0.0f,  0.5f}, {0.5f,  0.5f},
+  {-sqd4, -sqd4}, { sqd4, -sqd4},
+  {-sqd4,  sqd4}, { sqd4,  sqd4},
 };
 
-constexpr static unsigned int indices[24] {
-  0, 1, 4,    0, 4, 3,
-  1, 2, 5,    1, 5, 4,
-  3, 4, 7,    3, 7, 6,
-  4, 5, 8,    4, 8, 7
+//  0       1       2
+//      9       10
+//  3       4       5
+//      11      12
+//  6       7       8
+
+constexpr static unsigned int indices[48] {
+  0, 1, 9,    1, 2, 10,   0, 9, 3,    9, 1, 4,    1, 10, 4,   10, 2, 5,
+  3, 9, 4,    4, 10, 5,   3, 4, 11,   4, 5, 12,   6, 3, 11,   11, 4, 7,
+  4, 12, 7,   12, 5, 8,   6, 11, 7,   7, 12, 8
 };
 
 voxel_group::voxel_group(
   glm::vec3 background_colors[9], glm::vec3 spot_colors[9], const float factors[9],
   const std::vector<glm::vec2> &centers, const glm::mat4x3 &tiered_perlin
 ) : tiered_perlin{tiered_perlin}, instances{centers.size()} {
-  float raw_data[81];
+  float raw_data[13 * 9];
   for (int i = 0; i < 9; i++) {
     raw_data[9 * i + 0] = positions[i].x;
     raw_data[9 * i + 1] = positions[i].y;
@@ -201,6 +209,39 @@ voxel_group::voxel_group(
     raw_data[9 * i + 7] = spot_colors[i].b;
 
     raw_data[9 * i + 8] = factors[i];
+  }
+
+  const glm::vec3 mixed_bg[4] {
+    0.3f * (background_colors[0] + background_colors[1] + background_colors[3]) + 0.1f * background_colors[4],
+    0.3f * (background_colors[1] + background_colors[2] + background_colors[5]) + 0.1f * background_colors[4],
+    0.3f * (background_colors[3] + background_colors[6] + background_colors[7]) + 0.1f * background_colors[4],
+    0.3f * (background_colors[5] + background_colors[7] + background_colors[8]) + 0.1f * background_colors[4]
+  };
+  const glm::vec3 mixed_sp[4] {
+    0.3f * (spot_colors[0] + spot_colors[1] + spot_colors[3]) + 0.1f * spot_colors[4],
+    0.3f * (spot_colors[1] + spot_colors[2] + spot_colors[5]) + 0.1f * spot_colors[4],
+    0.3f * (spot_colors[3] + spot_colors[6] + spot_colors[7]) + 0.1f * spot_colors[4],
+    0.3f * (spot_colors[5] + spot_colors[7] + spot_colors[8]) + 0.1f * spot_colors[4]
+  };
+  const float mixed_f[4] {
+    0.3f * (factors[0] + factors[1] + factors[3]) + 0.1f * factors[4],
+    0.3f * (factors[1] + factors[2] + factors[5]) + 0.1f * factors[4],
+    0.3f * (factors[3] + factors[6] + factors[7]) + 0.1f * factors[4],
+    0.3f * (factors[5] + factors[7] + factors[8]) + 0.1f * factors[4]
+  };
+  for (int i = 0; i < 4; i++) {
+    raw_data[9 * (9 + i) + 0] = positions[9 + i].x;
+    raw_data[9 * (9 + i) + 1] = positions[9 + i].y;
+
+    raw_data[9 * (9 + i) + 2] = mixed_bg[i].r;
+    raw_data[9 * (9 + i) + 3] = mixed_bg[i].g;
+    raw_data[9 * (9 + i) + 4] = mixed_bg[i].b;
+
+    raw_data[9 * (9 + i) + 5] = mixed_sp[i].r;
+    raw_data[9 * (9 + i) + 6] = mixed_sp[i].g;
+    raw_data[9 * (9 + i) + 7] = mixed_sp[i].b;
+
+    raw_data[9 * (9 + i) + 8] = mixed_f[i];
   }
 
   GL_genVertexArrays(1, &vao);
@@ -241,7 +282,9 @@ void voxel_group::draw(const shader &s) {
   GL_bindVertexArray(vao);
   s.activate();
   s.set_mat4x3(uniform, tiered_perlin);
-  GL_drawElementsInstanced(GL_TRIANGLES, 24, GL_UNSIGNED_INT, nullptr, instances);
+  // GL_polygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  GL_drawElementsInstanced(GL_TRIANGLES, 48, GL_UNSIGNED_INT, nullptr, instances);
+  // GL_polygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 voxel_group::~voxel_group() {

@@ -45,6 +45,9 @@ objStmt: e=expr ';'                                 #exprStmt
     ;
 
 voxelStmt: e=expr ';'                               #vExprStmt
+    | '{' body+=voxelStmt* '}'                      #blockStmt
+    | 'for' '(' x=IDENTIFIER 'in' range=expr ')' body=voxelStmt
+                                                    #forStmt
     ;
 
 voxelBlock: s=voxelStmt                             #stmtBlock
