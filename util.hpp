@@ -68,7 +68,6 @@ std::optional<std::invoke_result_t<F, T>> operator|(const std::optional<T> &o, F
  * @tparam F The function to apply to the contained value (should have signature `(T) -> ?`).
  * @param o The `std::optional` to map over.
  * @param f The function to apply to the contained value.
- * @return The result of applying `f` (wrapped in an `std::optional` again), if `o != std::nullopt`.
  *
  * If `o` holds no value, this function returns `std::nullopt`. <br>
  * If `f(o)` returns a value of type `U`, this function returns `std::optional<U>{f(o)}`. <br>

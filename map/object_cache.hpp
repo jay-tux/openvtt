@@ -272,6 +272,16 @@ public:
     return std::nullopt;
   }
 
+  /**
+   * @brief Attempts to force a value into a pair of certain types.
+   * @tparam T1 The first target type.
+   * @tparam T2 The second target type.
+   * @return The value as a pair of the target types, or `std::nullopt` if the value is not a pair or the types don't match.
+   *
+   * If the value is not a `value_pair`, an error message is logged, and `std::nullopt` is returned.
+   * If the value is a pair, but the types don't match, an error message is logged, and `std::nullopt` is returned.
+   * Otherwise, the value is returned as a pair of the target types.
+   */
   template <valid_value T1, valid_value T2>
   [[nodiscard]] constexpr std::optional<std::pair<T1, T2>> expecting() const {
     if (is<value_pair>()) {
@@ -302,8 +312,20 @@ public:
    */
   [[nodiscard]] constexpr const loc &pos() const { return generated; }
 
+  /**
+   * @brief Sets the location of the value.
+   * @param pos The new location.
+   * @return A reference to this value.
+   */
   value &relocate(const loc &pos) { generated = pos; return *this; }
 
+  /**
+   * @brief Attempts to perform multiplication.
+   * @param other The other value.
+   * @return The resulting value.
+   *
+   * Multiplication is only defined for any combination of `int` and `float`.
+   */
   value operator*(const value &other) const {
     return with_int_float(other,
       [this](const int x, const int y) { return value{x * y, generated}; },
@@ -315,6 +337,13 @@ public:
     );
   }
 
+  /**
+   * @brief Attempts to perform division.
+   * @param other The other value.
+   * @return The resulting value.
+   *
+   * Division is only defined for any combination of `int` and `float`.
+   */
   value operator/(const value &other) const {
     return with_int_float(other,
       [this](const int x, const int y) { return value{x / y, generated}; },
@@ -326,12 +355,30 @@ public:
     );
   }
 
+  /**
+   * @brief Attempts to perform a modulo-operation.
+   * @param other The other value.
+   * @return The resulting value.
+   *
+   * Modulo is only defined for `int % int`.
+   */
   value operator%(const value &other) const {
     if (is<int>() && other.is<int>()) return value{as<int>() % other.as<int>(), generated};
     log_operand_mismatch("%", other);
     return value{0, generated};
   }
 
+  /**
+   * @brief Attempts to perform either addition or appending.
+   * @param other The other value.
+   * @return The resulting value.
+   *
+   * If both values are `int` or `float`, addition is performed.
+   * If this value is a list, and the other value is also a list, the lists are concatenated.
+   * If this value is a list, and the other one isn't, the other value is appended to the list.
+   * If this value is a string, the other value is appended to the string.
+   * Otherwise, the operation is invalid, and an error message is logged.
+   */
   value operator+(const value &other) const {
     return with_int_float(other,
       [this](const int x, const int y) { return value{x + y, generated}; },
@@ -361,6 +408,13 @@ public:
     );
   }
 
+  /**
+   * @brief Attempts to perform subtraction.
+   * @param other The other value.
+   * @return The resulting value.
+   *
+   * Subtraction is only defined for any combination of `int` and `float`.
+   */
   value operator-(const value &other) const {
     return with_int_float(other,
       [this](const int x, const int y) { return value{x - y, generated}; },
@@ -372,6 +426,13 @@ public:
     );
   }
 
+  /**
+   * @brief Attempts to compare two values for equality.
+   * @param other The other value.
+   * @return The resulting value.
+   *
+   * Equality is only defined for two values of the same type, including integer-to-float promotion.
+   */
   value operator==(const value &other) const {
     return std::visit(
       [this, &other]<typename T>(const T &x) -> value {
@@ -393,6 +454,13 @@ public:
     );
   }
 
+  /**
+   * @brief Attempts to compare two values for inequality.
+   * @param other The other value.
+   * @return The resulting value.
+   *
+   * Inequality is only defined for two values of the same type, including integer-to-float promotion.
+   */
   value operator!=(const value &other) const {
     return std::visit(
       [this, &other]<typename T>(const T &x) -> value {
@@ -414,6 +482,13 @@ public:
     );
   }
 
+  /**
+   * @brief Attempts to check if this value is less than another value.
+   * @param other The other value.
+   * @return The resulting value.
+   *
+   * This operator is only defined for any combination of `int` and `float`.
+   */
   value operator<(const value &other) const {
     return with_int_float(other,
       [this](const int x, const int y) { return value{x < y, generated}; },
@@ -425,6 +500,13 @@ public:
     );
   }
 
+  /**
+   * @brief Attempts to check if this value is greater than another value.
+   * @param other The other value.
+   * @return The resulting value.
+   *
+   * This operator is only defined for any combination of `int` and `float`.
+   */
   value operator>(const value &other) const {
     return with_int_float(other,
       [this](const int x, const int y) { return value{x > y, generated}; },
@@ -436,6 +518,13 @@ public:
     );
   }
 
+  /**
+   * @brief Attempts to check if this value is less than or equal to another value.
+   * @param other The other value.
+   * @return The resulting value.
+   *
+   * This operator is only defined for any combination of `int` and `float`.
+   */
   value operator<=(const value &other) const {
     return with_int_float(other,
       [this](const int x, const int y) { return value{x <= y, generated}; },
@@ -447,6 +536,13 @@ public:
     );
   }
 
+  /**
+   * @brief Attempts to check if this value is greater than or equal to another value.
+   * @param other The other value.
+   * @return The resulting value.
+   *
+   * This operator is only defined for any combination of `int` and `float`.
+   */
   value operator>=(const value &other) const {
     return with_int_float(other,
       [this](const int x, const int y) { return value{x >= y, generated}; },
@@ -458,12 +554,19 @@ public:
     );
   }
 
+  /**
+   * @deprecated Should not be used (only for STL compliance).
+   * @brief Operator implemented to support `operator==` on `std::vector<value>`.
+   */
   bool operator!() const {
     // NOT MEANT FOR ACTUAL USE!
     if (is<bool>()) return !as<bool>();
     OPENVTT_UNREACHABLE;
   }
 
+  /**
+   * @brief Generates a string representation of the value.
+   */
   explicit operator std::string() const {
     if (is<std::string>()) return as<std::string>();
     if (is<bool>()) {
@@ -562,6 +665,12 @@ private:
   loc generated;
 };
 
+/**
+ * @brief Compares to value pairs for equality.
+ * @param other The other value pair.
+ * @return `true` if the value pairs are equal, `false` otherwise.
+ * @see value::operator==()
+ */
 inline bool value_pair::operator==(const value_pair &other) const {
   const auto &v1 = first() == other.first();
   const auto &v2 = second() == other.second();

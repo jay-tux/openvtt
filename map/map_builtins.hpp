@@ -195,6 +195,14 @@ value handle_no_value(const or_error<T> &res, const loc &pos) {
   return value{std::monostate{}, pos};
 }
 
+/**
+ * @brief Verifies if a builtin function running in the given visitor is executed with the correct scope.
+ * @tparam s The expected scope.
+ * @param func The function name.
+ * @param v The map visitor.
+ * @param pos The position of the call.
+ * @return Either an empty success value (`either_tag`), or an error message.
+ */
 template <map_visitor::scope s>
 inline or_error<either_tag> requires_scope(const std::string &func, const map_visitor &v, const loc &pos) {
   constexpr static auto scope_name = [](const map_visitor::scope &scope) -> std::string {

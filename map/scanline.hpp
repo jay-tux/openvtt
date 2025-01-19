@@ -174,6 +174,12 @@ inline std::vector<std::pair<int, int>> scanline_fill(const std::vector<std::pai
   return result;
 }
 
+/**
+ * @brief Determines the border of a region.
+ * @param selected The selected points (the region).
+ * @param width The width of the border.
+ * @return A set of coordinates representing the border.
+ */
 inline std::vector<std::pair<int, int>> border(const std::vector<std::pair<int, int>> &selected, const int width) {
   const auto extend = [&width](const std::pair<int, int> &point) -> std::generator<std::pair<int, int>> {
     const auto [x0, y0] = point;
