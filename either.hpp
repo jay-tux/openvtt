@@ -250,6 +250,23 @@ constexpr res_t<F, const R &> operator>>(const either<L, R> &e, F f) {
 }
 
 /**
+ * @brief Binds the `either` to a function.
+ * @tparam L The left type of the `either`.
+ * @tparam F The function type (should be `() -> either<L, T>`).
+ * @param e The `either` to bind.
+ * @param f The function to bind with.
+ * @return The result of the function call.
+ *
+ * This operator is a shorthand for `bind(e, [&f](const auto &){ return f(); })`, and can be used to chain functions
+ * which return no value on success (`either<E, either_tag>`).
+ */
+template <typename L, std::invocable<> F>
+requires(is_either<res_t<F>> && std::convertible_to<L, typename either_traits<res_t<F>>::left_t>)
+constexpr res_t<F> operator>>(const either<L, either_tag> &e, F f) {
+  return bind(e, [&f](const auto &){ return f(); });
+}
+
+/**
  * @brief Folds the `either` using two functions.
  * @tparam L The left type of the `either`.
  * @tparam R The right type of the `either`.

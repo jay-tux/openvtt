@@ -170,7 +170,6 @@ constexpr auto map_vec(const std::vector<T> &vec, F &&f) -> std::vector<std::inv
   for (const auto &x : vec) res.push_back(f(x));
   return res;
 }
-
 }
 
 #ifdef OPENVTT_DEBUG

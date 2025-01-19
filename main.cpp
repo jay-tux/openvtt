@@ -60,6 +60,7 @@ int main(int argc, const char **argv) {
     {
       { true, { .pos = {0, 1, 0}, .diffuse = {0.9, 0.9, 0.6} } }
   });
+  bool draw_lights = false;
 
   std::vector<render_ref> set_base;
   std::vector<instanced_render_ref> set_inst_base;
@@ -147,13 +148,15 @@ int main(int argc, const char **argv) {
     if (enable_axes) ax.draw(cam);
 
     const auto mouse = cache::mouse_y0(cam);
-    ax.draw(cam, {mouse.x, 0, mouse.y}, 0.25f);
+    // ax.draw(cam, {mouse.x, 0, mouse.y}, 0.25f);
+
+    if (draw_lights) lights.draw_actives(ax, cam);
 
     fps_counter::render(mouse);
     log_view::render();
     cam.render_controls();
     cache::detail_window();
-    lights.detail_window();
+    lights.detail_window(&draw_lights);
     highlighter::get_fbo().draw_texture_imgui("Highlight Buffer", 256, 256);
 
     win.frame_post();

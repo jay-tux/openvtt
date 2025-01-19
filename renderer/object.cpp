@@ -239,11 +239,9 @@ void voxel_group::draw(const shader &s) {
   }
 
   GL_bindVertexArray(vao);
-  GL_polygonMode(GL_FRONT_AND_BACK, GL_LINE);
   s.activate();
   s.set_mat4x3(uniform, tiered_perlin);
   GL_drawElementsInstanced(GL_TRIANGLES, 24, GL_UNSIGNED_INT, nullptr, instances);
-  GL_polygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 voxel_group::~voxel_group() {

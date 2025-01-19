@@ -17,6 +17,7 @@ objectsSpec: 'objects' '{' body+=objStmt* '}';
 exprList: exprs+=expr (',' exprs+=expr)*;
 
 expr: x=IDENTIFIER                                  #idExpr
+    // literals
     | 'true'                                        #trueExpr
     | 'false'                                       #falseExpr
     | x=INT                                         #intExpr
@@ -26,7 +27,17 @@ expr: x=IDENTIFIER                                  #idExpr
     | '(' x=expr ',' y=expr ',' z=expr ')'          #vec3Expr
     | '[' ']'                                       #emptyListExpr
     | '[' exprs=exprList ']'                        #listExpr
+    // parenthesized
+    | '(' e=expr ')'                                #parenExpr
+    // operators
+    | left=expr '^' right=expr                      #powExpr
+    | left=expr op=('*'|'/'|'%') right=expr         #mulDivModExpr
+    | left=expr op=('+'|'-') right=expr             #addSubExpr
+    | left=expr op=('=='|'!='|'<'|'>'|'<='|'>=') right=expr
+                                                    #compExpr
+    // assignment
     | x=IDENTIFIER '=' value=expr                   #assignExpr
+    // function call
     | x=FUNC_NAME '(' args=exprList ')'             #funcExpr
     ;
 

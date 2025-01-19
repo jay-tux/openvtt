@@ -107,6 +107,8 @@ public:
    */
   [[nodiscard]] value &second() const;
 
+  [[nodiscard]] bool operator==(const value_pair &other) const;
+
   ~value_pair();
 private:
   value *_first = nullptr;
@@ -213,7 +215,7 @@ public:
    * If the contained value (`std::variant`) would be `valueless_by_exception`, this function returns `false`.
    */
   template <valid_value T>
-  [[nodiscard]] constexpr bool is() const { return !x.valueless_by_exception() && std::holds_alternative<T>(x); }
+  [[nodiscard]] inline bool is() const { return !x.valueless_by_exception() && std::holds_alternative<T>(x); }
 
   /**
    * @brief Applies a visitor to the value.
@@ -300,7 +302,237 @@ public:
    */
   [[nodiscard]] constexpr const loc &pos() const { return generated; }
 
+  value &relocate(const loc &pos) { generated = pos; return *this; }
+
+  value operator*(const value &other) const {
+    return with_int_float(other,
+      [this](const int x, const int y) { return value{x * y, generated}; },
+      [this](const float x, const float y) { return value{x * y, generated}; },
+      [this, &other] {
+        log_operand_mismatch("*", other);
+        return value{0, generated};
+      }
+    );
+  }
+
+  value operator/(const value &other) const {
+    return with_int_float(other,
+      [this](const int x, const int y) { return value{x / y, generated}; },
+      [this](const float x, const float y) { return value{x / y, generated}; },
+      [this, &other] {
+        log_operand_mismatch("/", other);
+        return value{0, generated};
+      }
+    );
+  }
+
+  value operator%(const value &other) const {
+    if (is<int>() && other.is<int>()) return value{as<int>() % other.as<int>(), generated};
+    log_operand_mismatch("%", other);
+    return value{0, generated};
+  }
+
+  value operator+(const value &other) const {
+    return with_int_float(other,
+      [this](const int x, const int y) { return value{x + y, generated}; },
+      [this](const float x, const float y) { return value{x + y, generated}; },
+      [this, &other] {
+        if (is<std::vector<value>>()) {
+          const auto &v = as<std::vector<value>>();
+          if (other.is<std::vector<value>>()) {
+            const auto &ov = other.as<std::vector<value>>();
+            std::vector res{v};
+            res.insert(res.end(), ov.begin(), ov.end());
+            return value{res, generated};
+          }
+
+          std::vector res{v};
+          res.push_back(other);
+          return value{res, generated};
+        }
+
+        if (is<std::string>()) {
+          return value{as<std::string>() + static_cast<std::string>(other), generated};
+        }
+
+        log_operand_mismatch("+", other);
+        return value{0, generated};
+      }
+    );
+  }
+
+  value operator-(const value &other) const {
+    return with_int_float(other,
+      [this](const int x, const int y) { return value{x - y, generated}; },
+      [this](const float x, const float y) { return value{x - y, generated}; },
+      [this, &other] {
+        log_operand_mismatch("-", other);
+        return value{0, generated};
+      }
+    );
+  }
+
+  value operator==(const value &other) const {
+    return std::visit(
+      [this, &other]<typename T>(const T &x) -> value {
+        if (other.is<T>()) {
+          return value{x == other.as<T>(), generated};
+        }
+        if constexpr(std::same_as<T, float>) {
+          if (other.is<int>())
+            return value{x == static_cast<float>(other.as<int>()), generated};
+        }
+        if constexpr(std::same_as<T, int>) {
+          if (other.is<float>())
+            return value{static_cast<float>(x) == other.as<float>(), generated};
+        }
+        log_operand_mismatch("==", other);
+        return value{false, generated};
+      },
+      x
+    );
+  }
+
+  value operator!=(const value &other) const {
+    return std::visit(
+      [this, &other]<typename T>(const T &x) -> value {
+        if (other.is<T>()) {
+          return value{x != other.as<T>(), generated};
+        }
+        if constexpr(std::same_as<T, float>) {
+          if (other.is<int>())
+            return value{x != static_cast<float>(other.as<int>()), generated};
+        }
+        if constexpr(std::same_as<T, int>) {
+          if (other.is<float>())
+            return value{static_cast<float>(x) != other.as<float>(), generated};
+        }
+        log_operand_mismatch("!=", other);
+        return value{false, generated};
+      },
+      x
+    );
+  }
+
+  value operator<(const value &other) const {
+    return with_int_float(other,
+      [this](const int x, const int y) { return value{x < y, generated}; },
+      [this](const float x, const float y) { return value{x < y, generated}; },
+      [this, &other] {
+        log_operand_mismatch("<", other);
+        return value{false, generated};
+      }
+    );
+  }
+
+  value operator>(const value &other) const {
+    return with_int_float(other,
+      [this](const int x, const int y) { return value{x > y, generated}; },
+      [this](const float x, const float y) { return value{x > y, generated}; },
+      [this, &other] {
+        log_operand_mismatch(">", other);
+        return value{false, generated};
+      }
+    );
+  }
+
+  value operator<=(const value &other) const {
+    return with_int_float(other,
+      [this](const int x, const int y) { return value{x <= y, generated}; },
+      [this](const float x, const float y) { return value{x <= y, generated}; },
+      [this, &other] {
+        log_operand_mismatch("<=", other);
+        return value{false, generated};
+      }
+    );
+  }
+
+  value operator>=(const value &other) const {
+    return with_int_float(other,
+      [this](const int x, const int y) { return value{x >= y, generated}; },
+      [this](const float x, const float y) { return value{x >= y, generated}; },
+      [this, &other] {
+        log_operand_mismatch(">=", other);
+        return value{false, generated};
+      }
+    );
+  }
+
+  bool operator!() const {
+    // NOT MEANT FOR ACTUAL USE!
+    if (is<bool>()) return !as<bool>();
+    OPENVTT_UNREACHABLE;
+  }
+
+  explicit operator std::string() const {
+    if (is<std::string>()) return as<std::string>();
+    if (is<bool>()) {
+      if (as<bool>()) return "true";
+      return "false";
+    }
+    if (is<int>()) return std::to_string(as<int>());
+    if (is<float>()) return std::to_string(as<float>());
+    if (is<glm::vec3>()) {
+      const auto &v = as<glm::vec3>();
+      return std::format("({:.2f}, {:.2f}, {:.2f})", v.x, v.y, v.z);
+    }
+    if (is<glm::mat4>()) {
+      const auto &m = as<glm::mat4>();
+      return std::format(
+        "mat4[[{}, {}, {}, {}], [{}, {}, {}, {}], [{}, {}, {}, {}], [{}, {}, {}, {}]]",
+        m[0].x, m[0].y, m[0].z, m[0].w, m[1].x, m[1].y, m[1].z, m[1].w,
+        m[2].x, m[2].y, m[2].z, m[2].w, m[3].x, m[3].y, m[3].z, m[3].w
+      );
+    }
+    if (is<renderer::object_ref>()) return std::format("object#{}", as<renderer::object_ref>().raw());
+    if (is<renderer::instanced_object_ref>()) return std::format("instanced_object#{}", as<renderer::instanced_object_ref>().raw());
+    if (is<renderer::shader_ref>()) return std::format("shader#{}", as<renderer::shader_ref>().raw());
+    if (is<renderer::texture_ref>()) return std::format("texture#{}", as<renderer::texture_ref>().raw());
+    if (is<renderer::collider_ref>()) return std::format("collider#{}", as<renderer::collider_ref>().raw());
+    if (is<renderer::instanced_collider_ref>()) return std::format("instanced_collider#{}", as<renderer::instanced_collider_ref>().raw());
+    if (is<renderer::render_ref>()) return std::format("renderable#{}", as<renderer::render_ref>().raw());
+    if (is<renderer::instanced_render_ref>()) return std::format("instanced_renderable#{}", as<renderer::instanced_render_ref>().raw());
+    if (is<voxel_corner>()) {
+      return voxel_corner_str(as<voxel_corner>());
+    }
+    if (is<voxel_desc>()) {
+      const auto &[c0, c1, c2, c3, c4, c5, c6, c7, c8] = as<voxel_desc>();
+      return std::format(
+        "voxel[ tl={}, tc={}, tr={}, cl={}, c={}, cr={}, bl={}, bc={}, br={} ]",
+        voxel_corner_str(c0), voxel_corner_str(c1), voxel_corner_str(c2),
+        voxel_corner_str(c3), voxel_corner_str(c4), voxel_corner_str(c5),
+        voxel_corner_str(c6), voxel_corner_str(c7), voxel_corner_str(c8)
+      );
+    }
+    if (is<value_pair>()) {
+      return std::format("({}, {})", static_cast<std::string>(as<value_pair>().first()), static_cast<std::string>(as<value_pair>().second()));
+    }
+    if (is<std::vector<value>>()) {
+      const auto &v = as<std::vector<value>>();
+      if (v.empty()) return "[]";
+
+      std::stringstream strm;
+      strm << "[ " << static_cast<std::string>(v[0]);
+      for (size_t i = 1; i < v.size(); ++i) {
+        strm << ", " << static_cast<std::string>(v[i]);
+      }
+      strm << " ]";
+      return strm.str();
+    }
+    if (is<std::monostate>()) return "void";
+    OPENVTT_UNREACHABLE;
+  }
+
 private:
+  static std::string voxel_corner_str(const voxel_corner &vc) {
+    const auto &[a, b, c] = vc;
+    return std::format("back=({}, {}, {}), front=({}, {}, {}), scale={}", a.x, a.y, a.z, b.x, b.y, b.z, c);
+  }
+
+  void log_operand_mismatch(const std::string &op, const value &other) const {
+    renderer::log<renderer::log_type::ERROR>("value", "Invalid operands for operator{}: {} (at {}) {} {} (at {})", op, type_name(), generated.str(), op, other.type_name(), other.generated.str());
+  }
+
   using var_t = std::variant<
     bool, int, float, std::string, glm::vec3, glm::mat4,
     renderer::object_ref, renderer::instanced_object_ref, renderer::shader_ref, renderer::texture_ref,
@@ -309,9 +541,33 @@ private:
     value_pair, std::vector<value>, std::monostate
   >;
 
+  template <std::invocable<int, int> F1, std::invocable<float, float> F2, std::invocable<> FE>
+  requires(std::same_as<std::invoke_result_t<F1, int, int>, std::invoke_result_t<F2, float, float>> &&
+    std::same_as<std::invoke_result_t<F2, float, float>, std::invoke_result_t<FE>>
+  )
+  auto with_int_float(const value &other, F1 &&f1, F2 && f2, FE &&fe) const -> std::invoke_result_t<F1, int, int> {
+    if (is<int>()) {
+      if (other.is<int>()) return f1(as<int>(), other.as<int>());
+      if (other.is<float>()) return f2(static_cast<float>(as<int>()), other.as<float>());
+    }
+    if (is<float>()) {
+      if (other.is<int>()) return f2(as<float>(), static_cast<float>(other.as<int>()));
+      if (other.is<float>()) return f2(as<float>(), other.as<float>());
+    }
+
+    return fe();
+  }
+
   var_t x;
   loc generated;
 };
+
+inline bool value_pair::operator==(const value_pair &other) const {
+  const auto &v1 = first() == other.first();
+  const auto &v2 = second() == other.second();
+  return v1.as<bool>() && v2.as<bool>();
+}
+
 
 /**
  * @brief A type trait holding default values for each valid value type.

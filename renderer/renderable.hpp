@@ -11,6 +11,7 @@
 #include <optional>
 #include <utility>
 
+#include "gizmos.hpp"
 #include "glm_wrapper.hpp"
 #include "log_view.hpp"
 
@@ -453,12 +454,24 @@ public:
 
   /**
    * @brief Draw the detail window for the phong lighting.
+   * @param draw_gizmos Toggle for drawing the gizmos (managed by the UI).
    *
    * This window shows the ambient light strength, as well as all details for each point light. It allows for editing
    * each of these values (including the enabled-ness of each point light). Additionally, it allows for adding new
    * point lights.
    */
-  void detail_window();
+  void detail_window(bool *draw_gizmos);
+
+  /**
+   * @brief Draws all active lights as axis gizmos.
+   * @param ax Axis gizmo to use.
+   * @param cam Camera to use.
+   */
+  inline void draw_actives(const axes &ax, const camera &cam) const {
+    for (const auto &[a, p]: points) {
+      if (a) ax.draw(cam, p.pos, 0.25f);
+    }
+  }
 
   float ambient_strength; //!< The ambient light strength.
   bool enable_sun = true; //!< Whether the directional light is enabled.

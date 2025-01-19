@@ -16,23 +16,22 @@ std::any map_visitor::visitProgram(mapParser::ProgramContext *context) {
 }
 
 std::any map_visitor::visitVoxelSpec(mapParser::VoxelSpecContext *context) {
-  context_stack.emplace_back();
-  for (const auto stmt: context->body) {
+  with_scope<scope::VOXEL>([this, context] {
+    for (const auto stmt: context->body) {
     visit_through(stmt, at(*context));
   }
-  context_stack.pop_back();
-
+  });
   perlin_scale = std::stof(context->scale->getText());
 
   return no_value{at(*context)};
 }
 
 std::any map_visitor::visitObjectsSpec(mapParser::ObjectsSpecContext *context) {
-  context_stack.emplace_back();
-  for (const auto stmt: context->body) {
-    visit_through(stmt, at(*context));
-  }
-  context_stack.pop_back();
+  with_scope<scope::OBJECTS>([this, context] {
+    for (const auto stmt: context->body) {
+      visit_through(stmt, at(*context));
+    }
+  });
   return no_value{at(*context)}; // no reasonable return value possible
 }
 
@@ -94,11 +93,69 @@ std::any map_visitor::visitListExpr(mapParser::ListExprContext *context) {
   return value{visit_type_check<std::vector<value>>(context->exprs, at(*context), "value list"), at(*context)};
 }
 
+std::any map_visitor::visitParenExpr(mapParser::ParenExprContext *context) {
+  return visit_through(context->e, at(*context));
+}
+
+std::any map_visitor::visitPowExpr(mapParser::PowExprContext *context) {
+  const auto x = visit_expect<float>(context->left, at(*context));
+  const auto e = visit_expect<float>(context->right, at(*context));
+  return value{ std::pow(x, e), at(*context) };
+}
+
+std::any map_visitor::visitMulDivModExpr(mapParser::MulDivModExprContext *context) {
+  const auto left = visit_to_value(context->left, at(*context));
+  const auto right = visit_to_value(context->right, at(*context));
+
+  if (context->op->getText() == "*") return (left * right).relocate(at(*context));
+  if (context->op->getText() == "/") return (left / right).relocate(at(*context));
+  if (context->op->getText() == "%") return (left % right).relocate(at(*context));
+
+  // else
+  log<log_type::ERROR>("map_parser", "Invalid operator '{}' at {}", context->op->getText(), at(*context).str());
+  return no_value{at(*context)};
+}
+
+std::any map_visitor::visitAddSubExpr(mapParser::AddSubExprContext *context) {
+  const auto left = visit_to_value(context->left, at(*context));
+  const auto right = visit_to_value(context->right, at(*context));
+
+  if (context->op->getText() == "+") return (left + right).relocate(at(*context));
+  if (context->op->getText() == "-") return (left - right).relocate(at(*context));
+
+  // else
+  log<log_type::ERROR>("map_parser", "Invalid operator '{}' at {}", context->op->getText(), at(*context).str());
+  return no_value{at(*context)};
+}
+
+std::any map_visitor::visitCompExpr(mapParser::CompExprContext *context) {
+  const auto left = visit_to_value(context->left, at(*context));
+  const auto right = visit_to_value(context->right, at(*context));
+
+  if (context->op->getText() == "==") return (left == right).relocate(at(*context));
+  if (context->op->getText() == "!=") return (left != right).relocate(at(*context));
+  if (context->op->getText() == "<") return (left < right).relocate(at(*context));
+  if (context->op->getText() == ">") return (left > right).relocate(at(*context));
+  if (context->op->getText() == "<=") return (left <= right).relocate(at(*context));
+  if (context->op->getText() == ">=") return (left >= right).relocate(at(*context));
+  //else
+  log<log_type::ERROR>("map_parser", "Invalid operator '{}' at {}", context->op->getText(), at(*context).str());
+  return no_value{at(*context)};
+}
+
 std::any map_visitor::visitAssignExpr(mapParser::AssignExprContext *context) {
   return visit_maybe_value(context->value, at(*context)) | [context, this](value v) {
-    // TODO: check in which context the variable is defined (if any)
-    context_stack.back().assign(context->x->getText(), std::move(v), at(*context));
-    return std::any{identifier{context->x->getText()}};
+    const auto &var = context->x->getText();
+    for (auto &ctx: context_stack | std::ranges::views::reverse) {
+      if (ctx.lookup_var_maybe(var).has_value()) {
+        ctx.assign(var, std::move(v), at(*context));
+        return std::any{identifier{var}};
+      }
+    }
+
+    // not found in stack, so declare a new var
+    context_stack.back().assign(var, std::move(v), at(*context));
+    return std::any{identifier{var}};
   } || [this, context]{ return no_value{at(*context)}; };
 }
 
@@ -152,7 +209,6 @@ std::any map_visitor::visitRegionBlock(mapParser::RegionBlockContext *context) {
 
   return no_value{at(*context)};
 }
-
 
 std::any map_visitor::visitStmtBlock(mapParser::StmtBlockContext *context) {
   visit_through(context->s, at(*context));

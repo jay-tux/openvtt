@@ -22,9 +22,11 @@ void color_picker_dialog(const char *label, glm::vec3 &color) {
 }
 }
 
-void phong_lighting::detail_window() {
+void phong_lighting::detail_window(bool *draw_gizmos) {
   ImGui::Begin("Phong Lighting Parameters");
+  ImGui::Checkbox("Draw light gizmos?", draw_gizmos);
   ImGui::SliderFloat("Ambient Strength", &ambient_strength, 1e-5f, 1.0f);
+
   for (size_t i = 0; i < points.size(); ++i) {
     ImGui::PushID(i);
     if (ImGui::CollapsingHeader(std::format("Point Light #{}", i + 1).c_str())) {

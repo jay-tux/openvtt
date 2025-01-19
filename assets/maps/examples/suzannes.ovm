@@ -1,13 +1,20 @@
-voxels(10) {
+voxels(5) {
     background = (188,183,153);
     spots = (49,17,10);
     palette = @mix(background, spots, 1);
     octaves = [(1, 1), (0.5, 2), (0.25, 4), (0.125, 8)];
 
-    bottom_right = @region([(5, 2), (2, 5), (5, 5)]);
-    back_region = (25, 183, 67);
-    region(bottom_right) {
+    bottom_left = @region([(5, 2), (2, 5), (5, 5)]);
+    back_region = (25, 103, 67);
+    region(bottom_left) {
         @all(@mix(back_region, spots, 0.33));
+        @perlin(octaves);
+        @seed(0, -0.8123, 0.98, 0.0984);
+    }
+    surrounding = @border(bottom_left, 2);
+    back_surrounding = (25, 183, 67);
+    region(surrounding) {
+        @all(@mix(back_surrounding, spots, 0.33));
         @perlin(octaves);
         @seed(0, -0.8123, 0.98, 0.0984);
     }

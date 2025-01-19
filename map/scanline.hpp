@@ -7,7 +7,8 @@
 
 #include <ranges>
 #include <vector>
-#include <set>
+#include <unordered_set>
+#include <generator>
 
 namespace openvtt::map {
 /**
@@ -171,6 +172,31 @@ inline std::vector<std::pair<int, int>> scanline_fill(const std::vector<std::pai
   }
 
   return result;
+}
+
+inline std::vector<std::pair<int, int>> border(const std::vector<std::pair<int, int>> &selected, const int width) {
+  const auto extend = [&width](const std::pair<int, int> &point) -> std::generator<std::pair<int, int>> {
+    const auto [x0, y0] = point;
+    const int xm = x0 - width, xM = x0 + width;
+    const int ym = y0 - width, yM = y0 + width;
+    for (int x = xm; x <= xM; x++) {
+      for (int y = ym; y <= yM; y++) {
+        const float dist = std::sqrt(static_cast<float>((x - x0) * (x - x0) + (y - y0) * (y - y0)));
+        if (dist <= static_cast<float>(width)) co_yield std::pair{x, y};
+      }
+    }
+  };
+
+  const std::unordered_set<std::pair<int, int>> original{selected.begin(), selected.end()};
+  std::unordered_set<std::pair<int, int>> result;
+  for (const auto &point: selected) {
+    for (const auto &ext: extend(point)) {
+      if (!original.contains(ext))
+        result.insert(ext);
+    }
+  }
+
+  return std::vector<std::pair<int, int>>{result.begin(), result.end()};
 }
 }
 
