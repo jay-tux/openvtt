@@ -11,6 +11,7 @@
 #endif
 #include "glad.h"
 #include "log_view.hpp"
+#include "gl_macros.hpp"
 
 namespace openvtt::renderer {
 /**
@@ -57,6 +58,6 @@ inline void on_gl_error(const int gl_error, const char *file, const int line, co
 }
 }
 
-#define gl(call) do { call; const auto _ = glGetError(); if(_ != GL_NO_ERROR) openvtt::renderer::on_gl_error(_, __FILE__, __LINE__, #call); } while(false)
+#define gl(call) do { static_assert(0, "REPLACE THIS"); call; const auto _ = glGetError(); if(_ != GL_NO_ERROR) openvtt::renderer::on_gl_error(_, __FILE__, __LINE__, #call); } while(false)
 
 #endif //GL_WRAPPER_HPP

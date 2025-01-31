@@ -84,6 +84,14 @@ add_executable(openvtt
         renderer/fbo.cpp
         renderer/glad.cpp
         map/map_parser.cpp
+        map/map_visitor.cpp
+        map/object_cache.cpp
+        renderer/gizmos.cpp
+)
+
+target_compile_definitions(openvtt PRIVATE
+        $<$<CONFIG:Debug>:OPENVTT_DEBUG>
+        $<$<CONFIG:Release>:OPENVTT_RELEASE>
 )
 
 target_include_directories(openvtt PRIVATE ${CMAKE_SOURCE_DIR})
@@ -100,17 +108,22 @@ target_link_libraries(openvtt PRIVATE
         map_spec
 )
 
-if (OPENVTT_USE_STACK_TRACE)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message(STATUS "Debug build - using stack trace library")
     target_link_libraries(openvtt PRIVATE stdc++exp)
-    target_compile_definitions(openvtt PRIVATE OPENVTT_USE_STACK_TRACE)
-endif ()
+    if (OPENVTT_USE_STACK_TRACE)
+        target_compile_definitions(openvtt PRIVATE OPENVTT_USE_STACK_TRACE)
+    endif ()
+else()
+    message(STATUS "Release build - no stack trace library")
+endif()
 
 file(CREATE_LINK "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/assets" COPY_ON_ERROR SYMBOLIC)
 
 if(DOXYGEN_FOUND)
     doxygen_add_docs(
             docs
-            "${CMAKE_SOURCE_DIR}" "${CMAKE_SOURCE_DIR}/renderer/"
+            "${CMAKE_SOURCE_DIR}" "${CMAKE_SOURCE_DIR}/renderer/" "${CMAKE_SOURCE_DIR}/map/"
             ALL
             CONFIG_FILE ${CMAKE_SOURCE_DIR}/Doxyfile
     )

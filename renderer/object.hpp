@@ -101,6 +101,7 @@ public:
     : instanced_object(std::move(render_object(vs, index)), models) {}
   constexpr instanced_object(instanced_object &&other) noexcept : render_object(std::move(other)) {
     std::swap(model_vbo, other.model_vbo);
+    std::swap(model_inv_t_vbo, other.model_inv_t_vbo);
     std::swap(instances, other.instances);
   }
 
@@ -149,6 +150,48 @@ private:
   unsigned int model_vbo = 0; //!< The additional VBO for the model matrices.
   unsigned int model_inv_t_vbo = 0; //!< The additional VBO for the inverse-transpose of the model matrices.
   size_t instances = -1ul; //!< The number of instances.
+};
+
+/**
+ * @brief A class representing a group of voxels to be rendered.
+ */
+class voxel_group {
+public:
+  /**
+   * @brief Constructs a new voxel group.
+   * @param background_colors The background colors of the voxels.
+   * @param spot_colors The spot colors of the voxels.
+   * @param factors The mixing factors of the voxels.
+   * @param centers The center coordinates of the voxels.
+   * @param tiered_perlin The parameters for the tiered Perlin noise.
+   */
+  voxel_group(glm::vec3 background_colors[9], glm::vec3 spot_colors[9], const float factors[9], const std::vector<glm::vec2> &centers, const glm::mat4x3 &tiered_perlin);
+  voxel_group(const voxel_group &other) = delete;
+  constexpr voxel_group(voxel_group &&other) noexcept {
+    std::swap(vbo, other.vbo);
+    std::swap(ebo, other.ebo);
+    std::swap(vao, other.vao);
+    std::swap(instances, other.instances);
+    std::swap(tiered_perlin, other.tiered_perlin);
+  }
+
+  /**
+   * @brief Renders the voxels using the given shader.
+   * @param s The shader to use.
+   */
+  void draw(const shader &s);
+  voxel_group &operator=(const voxel_group &other) = delete;
+  voxel_group &operator=(voxel_group &&other) = delete;
+
+  ~voxel_group();
+
+  glm::mat4x3 tiered_perlin{}; //!< The parameters for the tiered Perlin noise.
+private:
+  unsigned int vbo = 0;
+  unsigned int center_vbo = 0;
+  unsigned int ebo = 0;
+  unsigned int vao = 0;
+  size_t instances = 0;
 };
 }
 

@@ -6,7 +6,7 @@
 #include <sstream>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "gl_wrapper.hpp"
+#include "gl_macros.hpp"
 #include "window.hpp"
 #include "log_view.hpp"
 #include "filesys.hpp"
@@ -19,49 +19,49 @@ shader::shader(const std::string &vs, const std::string &fs) {
 
   const auto v = glCreateShader(GL_VERTEX_SHADER);
   const auto *str = vs.c_str();
-  gl(glShaderSource(v, 1, &str, nullptr));
-  gl(glCompileShader(v));
+  GL_shaderSource(v, 1, &str, nullptr);
+  GL_compileShader(v);
   int ok;
-  gl(glGetShaderiv(v, GL_COMPILE_STATUS, &ok));
+  GL_getShaderiv(v, GL_COMPILE_STATUS, &ok);
   if (!ok) {
     int len;
-    gl(glGetShaderiv(v, GL_INFO_LOG_LENGTH, &len));
+    GL_getShaderiv(v, GL_INFO_LOG_LENGTH, &len);
     auto *data = new char[len];
-    gl(glGetShaderInfoLog(v, len, &len, data));
+    GL_getShaderInfoLog(v, len, &len, data);
     log<log_type::ERROR>("shader", std::format("Failed to compile vertex shader: {}", data));
     delete[] data;
   }
 
   const auto f = glCreateShader(GL_FRAGMENT_SHADER);
   str = fs.c_str();
-  gl(glShaderSource(f, 1, &str, nullptr));
-  gl(glCompileShader(f));
-  gl(glGetShaderiv(f, GL_COMPILE_STATUS, &ok));
+  GL_shaderSource(f, 1, &str, nullptr);
+  GL_compileShader(f);
+  GL_getShaderiv(f, GL_COMPILE_STATUS, &ok);
   if (!ok) {
     int len;
-    gl(glGetShaderiv(f, GL_INFO_LOG_LENGTH, &len));
+    GL_getShaderiv(f, GL_INFO_LOG_LENGTH, &len);
     auto *data = new char[len];
-    gl(glGetShaderInfoLog(f, len, &len, data));
+    GL_getShaderInfoLog(f, len, &len, data);
     log<log_type::ERROR>("shader", std::format("Failed to compile fragment shader: {}", data));
     delete[] data;
   }
 
   program = glCreateProgram();
-  gl(glAttachShader(program, v));
-  gl(glAttachShader(program, f));
-  gl(glLinkProgram(program));
-  gl(glGetProgramiv(program, GL_LINK_STATUS, &ok));
+  GL_attachShader(program, v);
+  GL_attachShader(program, f);
+  GL_linkProgram(program);
+  GL_getProgramiv(program, GL_LINK_STATUS, &ok);
   if (!ok) {
     int len;
-    gl(glGetProgramiv(program, GL_INFO_LOG_LENGTH, &len));
+    GL_getProgramiv(program, GL_INFO_LOG_LENGTH, &len);
     auto *data = new char[len];
-    gl(glGetProgramInfoLog(program, len, &len, data));
+    GL_getProgramInfoLog(program, len, &len, data);
     log<log_type::ERROR>("shader", std::format("Failed to link shader: {}", data));
     delete[] data;
   }
 
-  gl(glDeleteShader(v));
-  gl(glDeleteShader(f));
+  GL_deleteShader(v);
+  GL_deleteShader(f);
 }
 
 shader shader::load_from(const std::string &vsf, const std::string &fsf) {
@@ -97,39 +97,42 @@ shader shader::load_from(const std::string &vsf, const std::string &fsf) {
 }
 
 void shader::set_bool(const unsigned int loc, const bool b) const {
-  activate(); gl(glUniform1i(loc, b));
+  activate(); GL_uniform1i(loc, b);
 }
 void shader::set_int(const unsigned int loc, const int i) const {
-  activate(); gl(glUniform1i(loc, i));
+  activate(); GL_uniform1i(loc, i);
 }
 void shader::set_uint(const unsigned int loc, const unsigned int i) const {
-  activate(); gl(glUniform1ui(loc, i));
+  activate(); GL_uniform1ui(loc, i);
 }
 void shader::set_float(const unsigned int loc, const float f) const {
-  activate(); gl(glUniform1f(loc, f));
+  activate(); GL_uniform1f(loc, f);
 }
 void shader::set_vec2(const unsigned int loc, const glm::vec2 &v) const {
-  activate(); gl(glUniform2fv(loc, 1, glm::value_ptr(v)));
+  activate(); GL_uniform2fv(loc, 1, glm::value_ptr(v));
 }
 void shader::set_vec3(const unsigned int loc, const glm::vec3 &v) const {
-  activate(); gl(glUniform3fv(loc, 1, glm::value_ptr(v)));
+  activate(); GL_uniform3fv(loc, 1, glm::value_ptr(v));
 }
 void shader::set_vec4(const unsigned int loc, const glm::vec4 &v) const {
-  activate(); gl(glUniform4fv(loc, 1, glm::value_ptr(v)));
+  activate(); GL_uniform4fv(loc, 1, glm::value_ptr(v));
 }
 void shader::set_mat3(const unsigned int loc, const glm::mat3 &m) const {
-  activate(); gl(glUniformMatrix3fv(loc, 1, GL_FALSE, glm::value_ptr(m)));
+  activate(); GL_uniformMatrix3fv(loc, 1, GL_FALSE, glm::value_ptr(m));
 }
 void shader::set_mat4(const unsigned int loc, const glm::mat4 &m) const {
-  activate(); gl(glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(m)));
+  activate(); GL_uniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(m));
+}
+void shader::set_mat4x3(const unsigned int loc, const glm::mat4x3 &m) const {
+  activate(); GL_uniformMatrix4x3fv(loc, 1, GL_FALSE, glm::value_ptr(m));
 }
 
 void shader::activate() const {
-  gl(glUseProgram(program));
+  GL_useProgram(program);
 }
 
 shader::~shader() {
-  gl(glDeleteProgram(program));
+  GL_deleteProgram(program);
 }
 
 unsigned int shader::loc_for(const std::string &name) const {

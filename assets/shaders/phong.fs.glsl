@@ -1,5 +1,11 @@
 #version 460
 
+struct sun_light {
+    vec3 direction;
+    vec3 diffuse;
+    vec3 specular;
+};
+
 struct point_light {
     vec3 pos;
     vec3 diffuse;
@@ -15,7 +21,9 @@ layout(location =  7) uniform bool is_highlighted;
 layout(location =  8) uniform vec3 view_pos;
 layout(location =  9) uniform int used_point_count;
 layout(location = 10) uniform float ambient_light;
-layout(location = 11) uniform point_light points[10];
+layout(location = 11) uniform bool use_sun;
+layout(location = 12) uniform sun_light sun;
+layout(location = 15) uniform point_light points[10];
 
 in vec2 out_uvs;
 in vec3 out_normal;
@@ -28,9 +36,20 @@ vec3 apply_lighting(vec3 color, vec3 color_spec) {
     vec3 amb = ambient_light * color;
 
     vec3 norm = normalize(out_normal);
+    vec3 view_dir = normalize(view_pos - out_pos);
 
     vec3 diff = vec3(0, 0, 0);
     vec3 spec = vec3(0, 0, 0);
+
+    if(use_sun) {
+        float fac_diff = max(dot(norm, -normalize(sun.direction)), 0.0);
+        diff += fac_diff * sun.diffuse;
+
+        vec3 reflect_dir = reflect(normalize(sun.direction), norm);
+        float fac_spec = pow(max(dot(view_dir, reflect_dir), 0.0), 32);
+        spec += fac_spec * sun.specular;
+    }
+
     for(int i = 0; i < used_point_count; i++) {
         float l = length(points[i].pos - out_pos);
         float attn = points[i].attenuation.x + points[i].attenuation.y * l + points[i].attenuation.z * l * l;
@@ -39,9 +58,8 @@ vec3 apply_lighting(vec3 color, vec3 color_spec) {
         float fac_diff = max(dot(norm, light_dir), 0.0);
         diff += fac_diff * points[i].diffuse / attn;
 
-        vec3 view_dir = normalize(view_pos - out_pos);
-        vec3 reflectDir = reflect(-light_dir, norm);
-        float fac_spec = pow(max(dot(view_dir, reflectDir), 0.0), 32);
+        vec3 reflect_dir = reflect(-light_dir, norm);
+        float fac_spec = pow(max(dot(view_dir, reflect_dir), 0.0), 32);
         spec += fac_spec * points[i].specular / attn;
     }
 

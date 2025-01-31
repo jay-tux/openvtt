@@ -3,29 +3,41 @@ grammar map;
 WS: [ \t\r\n]+ -> skip;
 STRING: '"' (~["\r\n\\])* '"';
 IDENTIFIER: [a-zA-Z_][a-zA-Z0-9_]*;
-INT: [1-9][0-9]*|'0';
+FUNC_NAME: '@'[a-zA-Z_][a-zA-Z0-9_*]*;
+INT: [+-]?[0-9]+;
+FLOAT: [+-]?([0-9]*[.])?[0-9]+;
 COMMENT: '//' ~[\r\n]* -> skip;
 
-program: voxels=voxelSpec objects=objectsSpec | objects=objectsSpec voxels=voxelSpec;
+program: objects=objectsSpec;
 
-voxelSpec: 'voxels' '(' w=INT ',' h=INT ')' '{' /*TODO*/ '}';
-
-objectsSpec: 'objects' '{' body+=stmt* '}';
-
-load: 'object' '(' asset=STRING ')'                 #loadObject
-    | 'shader' '(' vs=STRING ',' fs=STRING ')'      #loadShader
-    | 'texture' '(' asset=STRING ')'                #loadTexture
-    | 'collider' '(' asset=STRING ')'               #loadCollider
-    | 'font' '(' asset=STRING ')'                   #loadFont
-    ;
+objectsSpec: 'objects' '{' body+=objStmt* '}';
 
 exprList: exprs+=expr (',' exprs+=expr)*;
 
 expr: x=IDENTIFIER                                  #idExpr
-    | ld=load                                       #loadExpr
+    // literals
+    | 'true'                                        #trueExpr
+    | 'false'                                       #falseExpr
+    | x=INT                                         #intExpr
+    | x=FLOAT                                       #floatExpr
+    | x=STRING                                      #stringExpr
+    | '(' x=expr ',' y=expr ')'                     #tupleExpr
+    | '(' x=expr ',' y=expr ',' z=expr ')'          #vec3Expr
+    | '[' ']'                                       #emptyListExpr
+    | '[' exprs=exprList ']'                        #listExpr
+    // parenthesized
+    | '(' e=expr ')'                                #parenExpr
+    // operators
+    | left=expr '^' right=expr                      #powExpr
+    | left=expr op=('*'|'/'|'%') right=expr         #mulDivModExpr
+    | left=expr op=('+'|'-') right=expr             #addSubExpr
+    | left=expr op=('=='|'!='|'<'|'>'|'<='|'>=') right=expr
+                                                    #compExpr
+    // assignment
     | x=IDENTIFIER '=' value=expr                   #assignExpr
-    | 'combine' '(' args=exprList ')'               #combineExpr
+    // function call
+    | x=FUNC_NAME '(' args=exprList ')'             #funcExpr
     ;
 
-stmt: e=expr ';'                                    #exprStmt
+objStmt: e=expr ';'                                 #exprStmt
     ;

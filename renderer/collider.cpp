@@ -2,7 +2,7 @@
 // Created by jay on 12/2/24.
 //
 
-#include "gl_wrapper.hpp"
+#include "gl_macros.hpp"
 #include "collider.hpp"
 #include "filesys.hpp"
 
@@ -23,8 +23,8 @@ constexpr glm::vec3 element_max(const glm::vec3 &a, const glm::vec3 &b) {
 
 collider::collider(const std::vector<glm::vec3> &vertices, const std::vector<unsigned int> &indices)
   : vertices{vertices}, indices{indices} {
-  gl(glGenVertexArrays(1, &vao));
-  gl(glBindVertexArray(vao));
+  GL_genVertexArrays(1, &vao);
+  GL_bindVertexArray(vao);
 
   min = max = vertices[0];
   std::vector<float> v_data;
@@ -36,17 +36,17 @@ collider::collider(const std::vector<glm::vec3> &vertices, const std::vector<uns
     max = element_max(max, v);
   }
 
-  gl(glGenBuffers(1, &vbo));
-  gl(glBindBuffer(GL_ARRAY_BUFFER, vbo));
-  gl(glBufferData(GL_ARRAY_BUFFER, v_data.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW));
-  gl(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr));
-  gl(glEnableVertexAttribArray(0));
+  GL_genBuffers(1, &vbo);
+  GL_bindBuffer(GL_ARRAY_BUFFER, vbo);
+  GL_bufferData(GL_ARRAY_BUFFER, v_data.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+  GL_vertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr);
+  GL_enableVertexAttribArray(0);
 
-  gl(glGenBuffers(1, &ebo));
-  gl(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo));
-  gl(glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW));
+  GL_genBuffers(1, &ebo);
+  GL_bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+  GL_bufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 
-  gl(glBindVertexArray(0));
+  GL_bindVertexArray(0);
 }
 
 collider collider::load_from(const std::string &asset) {
@@ -100,11 +100,11 @@ collider collider::load_from(const std::string &asset) {
 }
 
 void collider::draw() const {
-  gl(glPolygonMode(GL_FRONT_AND_BACK, GL_LINE));
-  gl(glBindVertexArray(vao));
-  gl(glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr));
-  gl(glBindVertexArray(0));
-  gl(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+  GL_polygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  GL_bindVertexArray(vao);
+  GL_drawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
+  GL_bindVertexArray(0);
+  GL_polygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 float collider::ray_intersect(const ray &r, const glm::mat4 &model) const {
@@ -172,39 +172,39 @@ float collider::ray_intersect(const ray &r, const glm::mat4 &model) const {
 }
 
 void collider::bind_vao() const {
-  gl(glBindVertexArray(vao));
+  GL_bindVertexArray(vao);
 }
 
 collider::~collider() {
-  gl(glDeleteVertexArrays(1, &vao));
-  gl(glDeleteBuffers(1, &vbo));
-  gl(glDeleteBuffers(1, &ebo));
+  GL_deleteVertexArrays(1, &vao);
+  GL_deleteBuffers(1, &vbo);
+  GL_deleteBuffers(1, &ebo);
 }
 
 instanced_collider::instanced_collider(collider &&coll, const std::vector<glm::mat4> &models)
   : collider(std::move(coll)), models{models} {
   bind_vao();
-  gl(glGenBuffers(1, &model_vbo));
-  gl(glBindBuffer(GL_ARRAY_BUFFER, model_vbo));
+  GL_genBuffers(1, &model_vbo);
+  GL_bindBuffer(GL_ARRAY_BUFFER, model_vbo);
   int buf = 0;
-  gl(glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &buf));
-  gl(glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &buf));
-  gl(glBufferData(GL_ARRAY_BUFFER, models.size() * sizeof(glm::mat4), models.data(), GL_STATIC_DRAW));
+  GL_getIntegerv(GL_ARRAY_BUFFER_BINDING, &buf);
+  GL_getIntegerv(GL_MAX_VERTEX_ATTRIBS, &buf);
+  GL_bufferData(GL_ARRAY_BUFFER, models.size() * sizeof(glm::mat4), models.data(), GL_STATIC_DRAW);
   for (unsigned int i = 0; i < 4; i++) {
-    // gl(glVertexAttribPointer(i + 1, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), reinterpret_cast<void *>(4 * sizeof(float))));
+    // GL_vertexAttribPointer(i + 1, 4, GL_FLOAT, GL_FALSE, 16 * sizeof(float), reinterpret_cast<void *>(4 * sizeof(float)));
 
-    gl(glVertexAttribPointer(1 + i, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), reinterpret_cast<void *>(sizeof(glm::vec4) * i)));
-    gl(glEnableVertexAttribArray(1 + i));
-    gl(glVertexAttribDivisor(1 + i, 1));
+    GL_vertexAttribPointer(1 + i, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), reinterpret_cast<void *>(sizeof(glm::vec4) * i));
+    GL_enableVertexAttribArray(1 + i);
+    GL_vertexAttribDivisor(1 + i, 1);
   }
 }
 
 void instanced_collider::draw_all() const {
   bind_vao();
-  gl(glPolygonMode(GL_FRONT_AND_BACK, GL_LINE));
-  gl(glDrawElementsInstanced(GL_TRIANGLES, num_triangles(), GL_UNSIGNED_INT, nullptr, models.size()));
-  gl(glBindVertexArray(0));
-  gl(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+  GL_polygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  GL_drawElementsInstanced(GL_TRIANGLES, num_triangles(), GL_UNSIGNED_INT, nullptr, models.size());
+  GL_bindVertexArray(0);
+  GL_polygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 std::pair<float, size_t> instanced_collider::ray_intersect_any(const ray &r) const {
@@ -220,5 +220,5 @@ std::pair<float, size_t> instanced_collider::ray_intersect_any(const ray &r) con
 }
 
 instanced_collider::~instanced_collider() {
-  gl(glDeleteBuffers(1, &model_vbo));
+  GL_deleteBuffers(1, &model_vbo);
 }

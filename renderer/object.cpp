@@ -6,7 +6,7 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-#include "gl_wrapper.hpp"
+#include "gl_macros.hpp"
 #include "window.hpp"
 #include "object.hpp"
 #include "filesys.hpp"
@@ -23,24 +23,24 @@ render_object::render_object(const std::vector<vertex_spec> &vs, const std::vect
     vertex_buffer.push_back(norm.x); vertex_buffer.push_back(norm.y); vertex_buffer.push_back(norm.z);
   }
 
-  gl(glGenVertexArrays(1, &vao));
-  gl(glBindVertexArray(vao));
+  GL_genVertexArrays(1, &vao);
+  GL_bindVertexArray(vao);
 
-  gl(glGenBuffers(1, &vbo));
-  gl(glBindBuffer(GL_ARRAY_BUFFER, vbo));
-  gl(glBufferData(GL_ARRAY_BUFFER, vertex_buffer.size() * sizeof(float), vertex_buffer.data(), GL_STATIC_DRAW));
-  gl(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), nullptr));
-  gl(glEnableVertexAttribArray(0));
-  gl(glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), reinterpret_cast<void *>(3 * sizeof(float))));
-  gl(glEnableVertexAttribArray(1));
-  gl(glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), reinterpret_cast<void *>(5 * sizeof(float))));
-  gl(glEnableVertexAttribArray(2));
+  GL_genBuffers(1, &vbo);
+  GL_bindBuffer(GL_ARRAY_BUFFER, vbo);
+  GL_bufferData(GL_ARRAY_BUFFER, vertex_buffer.size() * sizeof(float), vertex_buffer.data(), GL_STATIC_DRAW);
+  GL_vertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), nullptr);
+  GL_enableVertexAttribArray(0);
+  GL_vertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), reinterpret_cast<void *>(3 * sizeof(float)));
+  GL_enableVertexAttribArray(1);
+  GL_vertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), reinterpret_cast<void *>(5 * sizeof(float)));
+  GL_enableVertexAttribArray(2);
 
-  gl(glGenBuffers(1, &ebo));
-  gl(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo));
-  gl(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * index.size(), index.data(), GL_STATIC_DRAW));
+  GL_genBuffers(1, &ebo);
+  GL_bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+  GL_bufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * index.size(), index.data(), GL_STATIC_DRAW);
 
-  gl(glBindVertexArray(0));
+  GL_bindVertexArray(0);
 }
 
 render_object render_object::load_from(const std::string &asset) {
@@ -112,32 +112,32 @@ render_object render_object::load_from(const std::string &asset) {
 }
 
 void render_object::draw(const shader &s) const {
-  gl(glBindVertexArray(vao));
+  GL_bindVertexArray(vao);
   s.activate();
-  gl(glDrawElements(GL_TRIANGLES, elements, GL_UNSIGNED_INT, nullptr));
+  GL_drawElements(GL_TRIANGLES, elements, GL_UNSIGNED_INT, nullptr);
 }
 
 void render_object::bind_vao() const {
-  gl(glBindVertexArray(vao));
+  GL_bindVertexArray(vao);
 }
 
 render_object::~render_object() {
-  gl(glBindVertexArray(0));
-  gl(glDeleteVertexArrays(1, &vao));
-  gl(glDeleteBuffers(1, &vbo));
-  gl(glDeleteBuffers(1, &ebo));
+  GL_bindVertexArray(0);
+  GL_deleteVertexArrays(1, &vao);
+  GL_deleteBuffers(1, &vbo);
+  GL_deleteBuffers(1, &ebo);
 }
 
 instanced_object::instanced_object(render_object &&ro, const std::vector<glm::mat4> &models)
   : render_object(std::move(ro)) {
   bind_vao();
-  gl(glGenBuffers(1, &model_vbo));
-  gl(glBindBuffer(GL_ARRAY_BUFFER, model_vbo));
-  gl(glBufferData(GL_ARRAY_BUFFER, models.size() * sizeof(glm::mat4), models.data(), GL_STATIC_DRAW));
+  GL_genBuffers(1, &model_vbo);
+  GL_bindBuffer(GL_ARRAY_BUFFER, model_vbo);
+  GL_bufferData(GL_ARRAY_BUFFER, models.size() * sizeof(glm::mat4), models.data(), GL_STATIC_DRAW);
   for (unsigned int i = 0; i < 4; i++) {
-    gl(glEnableVertexAttribArray(3 + i));
-    gl(glVertexAttribPointer(3 + i, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), reinterpret_cast<void *>(sizeof(glm::vec4) * i)));
-    gl(glVertexAttribDivisor(3 + i, 1));
+    GL_enableVertexAttribArray(3 + i);
+    GL_vertexAttribPointer(3 + i, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), reinterpret_cast<void *>(sizeof(glm::vec4) * i));
+    GL_vertexAttribDivisor(3 + i, 1);
   }
 
   auto *model_inv_t = new glm::mat4[models.size()];
@@ -145,13 +145,13 @@ instanced_object::instanced_object(render_object &&ro, const std::vector<glm::ma
     model_inv_t[i] = transpose(inverse(models[i]));
   }
 
-  gl(glGenBuffers(1, &model_inv_t_vbo));
-  gl(glBindBuffer(GL_ARRAY_BUFFER, model_inv_t_vbo));
-  gl(glBufferData(GL_ARRAY_BUFFER, models.size() * sizeof(glm::mat4), model_inv_t, GL_STATIC_DRAW));
-  for (unsigned int i = 0; i < 3; i++) {
-    gl(glEnableVertexAttribArray(7 + i));
-    gl(glVertexAttribPointer(7 + i, 3, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), reinterpret_cast<void *>(sizeof(glm::vec4) * i)));
-    gl(glVertexAttribDivisor(7 + i, 1));
+  GL_genBuffers(1, &model_inv_t_vbo);
+  GL_bindBuffer(GL_ARRAY_BUFFER, model_inv_t_vbo);
+  GL_bufferData(GL_ARRAY_BUFFER, models.size() * sizeof(glm::mat4), model_inv_t, GL_STATIC_DRAW);
+  for (unsigned int i = 0; i < 4; i++) {
+    GL_enableVertexAttribArray(7 + i);
+    GL_vertexAttribPointer(7 + i, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), reinterpret_cast<void *>(sizeof(glm::vec4) * i));
+    GL_vertexAttribDivisor(7 + i, 1);
   }
 
   instances = models.size();
@@ -162,10 +162,134 @@ instanced_object::instanced_object(render_object &&ro, const std::vector<glm::ma
 void instanced_object::draw_instanced(const shader &s) const {
   bind_vao();
   s.activate();
-  gl(glDrawElementsInstanced(GL_TRIANGLES, elements, GL_UNSIGNED_INT, nullptr, instances));
+  GL_drawElementsInstanced(GL_TRIANGLES, elements, GL_UNSIGNED_INT, nullptr, instances);
 }
 
 instanced_object::~instanced_object() {
-  gl(glDeleteBuffers(1, &model_vbo));
-  gl(glDeleteBuffers(1, &model_inv_t_vbo));
+  GL_deleteBuffers(1, &model_vbo);
+  GL_deleteBuffers(1, &model_inv_t_vbo);
+}
+
+constexpr static float sqd4 = std::sqrt(2.0f) / 6.0f;
+constexpr static glm::vec2 positions[13] {
+  {-0.5f, -0.5f}, {0.0f, -0.5f}, {0.5f, -0.5f},
+  {-0.5f,  0.0f}, {0.0f,  0.0f}, {0.5f,  0.0f},
+  {-0.5f,  0.5f}, {0.0f,  0.5f}, {0.5f,  0.5f},
+  {-sqd4, -sqd4}, { sqd4, -sqd4},
+  {-sqd4,  sqd4}, { sqd4,  sqd4},
+};
+
+//  0       1       2
+//      9       10
+//  3       4       5
+//      11      12
+//  6       7       8
+
+constexpr static unsigned int indices[48] {
+  0, 1, 9,    1, 2, 10,   0, 9, 3,    9, 1, 4,    1, 10, 4,   10, 2, 5,
+  3, 9, 4,    4, 10, 5,   3, 4, 11,   4, 5, 12,   6, 3, 11,   11, 4, 7,
+  4, 12, 7,   12, 5, 8,   6, 11, 7,   7, 12, 8
+};
+
+voxel_group::voxel_group(
+  glm::vec3 background_colors[9], glm::vec3 spot_colors[9], const float factors[9],
+  const std::vector<glm::vec2> &centers, const glm::mat4x3 &tiered_perlin
+) : tiered_perlin{tiered_perlin}, instances{centers.size()} {
+  float raw_data[13 * 9];
+  for (int i = 0; i < 9; i++) {
+    raw_data[9 * i + 0] = positions[i].x;
+    raw_data[9 * i + 1] = positions[i].y;
+
+    raw_data[9 * i + 2] = background_colors[i].r;
+    raw_data[9 * i + 3] = background_colors[i].g;
+    raw_data[9 * i + 4] = background_colors[i].b;
+
+    raw_data[9 * i + 5] = spot_colors[i].r;
+    raw_data[9 * i + 6] = spot_colors[i].g;
+    raw_data[9 * i + 7] = spot_colors[i].b;
+
+    raw_data[9 * i + 8] = factors[i];
+  }
+
+  const glm::vec3 mixed_bg[4] {
+    0.3f * (background_colors[0] + background_colors[1] + background_colors[3]) + 0.1f * background_colors[4],
+    0.3f * (background_colors[1] + background_colors[2] + background_colors[5]) + 0.1f * background_colors[4],
+    0.3f * (background_colors[3] + background_colors[6] + background_colors[7]) + 0.1f * background_colors[4],
+    0.3f * (background_colors[5] + background_colors[7] + background_colors[8]) + 0.1f * background_colors[4]
+  };
+  const glm::vec3 mixed_sp[4] {
+    0.3f * (spot_colors[0] + spot_colors[1] + spot_colors[3]) + 0.1f * spot_colors[4],
+    0.3f * (spot_colors[1] + spot_colors[2] + spot_colors[5]) + 0.1f * spot_colors[4],
+    0.3f * (spot_colors[3] + spot_colors[6] + spot_colors[7]) + 0.1f * spot_colors[4],
+    0.3f * (spot_colors[5] + spot_colors[7] + spot_colors[8]) + 0.1f * spot_colors[4]
+  };
+  const float mixed_f[4] {
+    0.3f * (factors[0] + factors[1] + factors[3]) + 0.1f * factors[4],
+    0.3f * (factors[1] + factors[2] + factors[5]) + 0.1f * factors[4],
+    0.3f * (factors[3] + factors[6] + factors[7]) + 0.1f * factors[4],
+    0.3f * (factors[5] + factors[7] + factors[8]) + 0.1f * factors[4]
+  };
+  for (int i = 0; i < 4; i++) {
+    raw_data[9 * (9 + i) + 0] = positions[9 + i].x;
+    raw_data[9 * (9 + i) + 1] = positions[9 + i].y;
+
+    raw_data[9 * (9 + i) + 2] = mixed_bg[i].r;
+    raw_data[9 * (9 + i) + 3] = mixed_bg[i].g;
+    raw_data[9 * (9 + i) + 4] = mixed_bg[i].b;
+
+    raw_data[9 * (9 + i) + 5] = mixed_sp[i].r;
+    raw_data[9 * (9 + i) + 6] = mixed_sp[i].g;
+    raw_data[9 * (9 + i) + 7] = mixed_sp[i].b;
+
+    raw_data[9 * (9 + i) + 8] = mixed_f[i];
+  }
+
+  GL_genVertexArrays(1, &vao);
+  GL_bindVertexArray(vao);
+
+  GL_genBuffers(1, &vbo);
+  GL_bindBuffer(GL_ARRAY_BUFFER, vbo);
+  GL_bufferData(GL_ARRAY_BUFFER, sizeof(raw_data), raw_data, GL_STATIC_DRAW);
+  GL_vertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(float), nullptr);
+  GL_enableVertexAttribArray(0);
+  GL_vertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), reinterpret_cast<void *>(2 * sizeof(float)));
+  GL_enableVertexAttribArray(1);
+  GL_vertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), reinterpret_cast<void *>(5 * sizeof(float)));
+  GL_enableVertexAttribArray(2);
+  GL_vertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 9 * sizeof(float), reinterpret_cast<void *>(8 * sizeof(float)));
+  GL_enableVertexAttribArray(3);
+
+  GL_genBuffers(1, &center_vbo);
+  GL_bindBuffer(GL_ARRAY_BUFFER, center_vbo);
+  GL_bufferData(GL_ARRAY_BUFFER, centers.size() * sizeof(glm::vec2), centers.data(), GL_STATIC_DRAW);
+  GL_vertexAttribPointer(4, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), nullptr);
+  GL_vertexAttribDivisor(4, 1);
+  GL_enableVertexAttribArray(4);
+
+  GL_genBuffers(1, &ebo);
+  GL_bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+  GL_bufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+}
+
+void voxel_group::draw(const shader &s) {
+  static const shader *last = &s;
+  static unsigned int uniform = s.loc_for("perlin_tiers");
+  if (last != &s) {
+    uniform = s.loc_for("perlin_tiers");
+    last = &s;
+  }
+
+  GL_bindVertexArray(vao);
+  s.activate();
+  s.set_mat4x3(uniform, tiered_perlin);
+  // GL_polygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  GL_drawElementsInstanced(GL_TRIANGLES, 48, GL_UNSIGNED_INT, nullptr, instances);
+  // GL_polygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
+
+voxel_group::~voxel_group() {
+  GL_deleteVertexArrays(1, &vao);
+  GL_deleteBuffers(1, &vbo);
+  GL_deleteBuffers(1, &center_vbo);
+  GL_deleteBuffers(1, &ebo);
 }

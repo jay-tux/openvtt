@@ -2,7 +2,7 @@
 // Created by jay on 11/30/24.
 //
 
-#include "gl_wrapper.hpp"
+#include "gl_macros.hpp"
 #include <imgui.h>
 
 #include "render_cache.hpp"
@@ -129,6 +129,27 @@ void render_cache::draw_colliders(const camera &cam) {
   }
 }
 
+glm::vec2 render_cache::mouse_y0(const camera &cam) {
+  const auto &io = window::get().io_data();
+
+  const auto mouse = io.MousePos;
+  const auto w_h = io.DisplaySize;
+  const glm::vec2 ndc = { 2 * mouse.x / w_h.x - 1, 1 - 2 * mouse.y / w_h.y };
+  const glm::vec4 clip_near = { ndc.x, ndc.y, -1, 1 };
+  const glm::vec4 clip_far = { ndc.x, ndc.y, 1, 1 };
+  const glm::mat4 clip_to_world = glm::inverse(camera::projection_matrix() * cam.view_matrix());
+  const auto near = clip_to_world * clip_near;
+  const auto far = clip_to_world * clip_far;
+
+  const glm::vec3 near_world{near.x / near.w, near.y / near.w, near.z / near.w};
+  const glm::vec3 far_world{far.x / far.w, far.y / far.w, far.z / far.w};
+
+  const float alpha = -near_world.y / (far_world.y - near_world.y);
+  const auto calc = near_world + alpha * (far_world - near_world);
+  return {calc.x, calc.z};
+}
+
+
 render_cache::collision_res render_cache::mouse_over(const camera &cam) {
   // --- Construct camera to mouse ray ---
   const auto &io = window::get().io_data();
@@ -153,7 +174,7 @@ render_cache::collision_res render_cache::mouse_over(const camera &cam) {
   std::optional<render_ref> res = std::nullopt;
   float t_dist = INFINITY;
   for (size_t i = 0; i < renderables.size(); i++) {
-    if (renderables[i].coll.has_value()) {
+    if (renderables[i].active && renderables[i].coll.has_value()) {
       const float d = (*renderables[i].coll)->ray_intersect(r, renderables[i].model());
 
       if (d < t_dist) {
@@ -167,7 +188,7 @@ render_cache::collision_res render_cache::mouse_over(const camera &cam) {
   std::optional<instanced_render_ref> inst_res = std::nullopt;
   size_t inst_idx = 0;
   for (size_t i = 0; i < instanced_renderables.size(); i++) {
-    if (instanced_renderables[i].coll.has_value()) {
+    if (instanced_renderables[i].active && instanced_renderables[i].coll.has_value()) {
       // ReSharper disable once CppTooWideScopeInitStatement
       const auto [d, idx] = (*instanced_renderables[i].coll)->ray_intersect_any(r);
 

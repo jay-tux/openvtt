@@ -101,6 +101,12 @@ public:
      * @param m The mat4 value to set the uniform to.
      */
   void set_mat4(unsigned int loc, const glm::mat4 &m) const;
+  /**
+   * @brief Sets the uniform with the given location to the given value.
+   * @param loc The location of the uniform.
+   * @param m The mat4x3 value to set the uniform to.
+   */
+  void set_mat4x3(unsigned int loc, const glm::mat4x3 &m) const;
 
   /**
    * @brief Activates the shader.
