@@ -8,9 +8,7 @@ INT: [+-]?[0-9]+;
 FLOAT: [+-]?([0-9]*[.])?[0-9]+;
 COMMENT: '//' ~[\r\n]* -> skip;
 
-program: voxels=voxelSpec objects=objectsSpec | objects=objectsSpec voxels=voxelSpec;
-
-voxelSpec: 'voxels' '(' scale=(INT|FLOAT) ')' '{' body+=voxelBlock* '}';
+program: objects=objectsSpec;
 
 objectsSpec: 'objects' '{' body+=objStmt* '}';
 
@@ -42,15 +40,4 @@ expr: x=IDENTIFIER                                  #idExpr
     ;
 
 objStmt: e=expr ';'                                 #exprStmt
-    ;
-
-voxelStmt: e=expr ';'                               #vExprStmt
-    | '{' body+=voxelStmt* '}'                      #blockStmt
-    | 'for' '(' x=IDENTIFIER 'in' range=expr ')' body=voxelStmt
-                                                    #forStmt
-    ;
-
-voxelBlock: s=voxelStmt                             #stmtBlock
-    | 'region' '(' r=expr ')' '{' body+=voxelStmt* '}'
-                                                    #regionBlock
     ;

@@ -82,11 +82,6 @@ struct map_visitor final : mapVisitor {
   std::unordered_map<renderer::shader_ref, single_highlight> requires_highlight{}; //!< The renderable objects that require highlighting.
   std::unordered_map<renderer::shader_ref, instanced_highlight> requires_instanced_highlight{}; //!< The instanced renderable objects that require highlighting.
   std::optional<int> highlight_binding{}; //!< The texture slot to which the highlighting FBO texture is bound.
-  float perlin_scale; //!< The scale for the perlin noise generation.
-  std::unordered_map<std::pair<int, int>, size_t> set_voxels{}; //!< The set of overridden voxels (the index of the voxel in the `voxels` vector).
-  std::vector<std::pair<voxel, std::vector<glm::vec2>>> voxels{}; //!< The values of the voxels.
-  voxel voxel_in_progress{}; //!< The voxel being constructed.
-  bool default_set = false; //!< Whether the default voxel has been set.
   bool show_axes = false; //!< Whether to show the axes.
   scope current_scope = scope::NONE; //!< The current scope of the visitor.
 
@@ -350,8 +345,6 @@ struct map_visitor final : mapVisitor {
 
   std::any visitProgram(mapParser::ProgramContext *context) override; //!< Visitor for the `program` rule.
 
-  std::any visitVoxelSpec(mapParser::VoxelSpecContext *context) override; //!< Visitor for the `voxelSpec` rule.
-
   std::any visitObjectsSpec(mapParser::ObjectsSpecContext *context) override; //!< Visitor for the `objectsSpec` rule.
 
   std::any visitExprList(mapParser::ExprListContext *context) override; //!< Visitor for the `exprList` rule.
@@ -391,16 +384,6 @@ struct map_visitor final : mapVisitor {
   std::any visitFuncExpr(mapParser::FuncExprContext *context) override; //!< Visitor for the `funcExpr` alternative.
 
   std::any visitExprStmt(mapParser::ExprStmtContext *context) override; //!< Visitor for the `exprStmt` alternative.
-
-  std::any visitVExprStmt(mapParser::VExprStmtContext *context) override; //!< Visitor for the `vExprStmt` alternative.
-
-  std::any visitBlockStmt(mapParser::BlockStmtContext *context) override; //!< Visitor for the `blockStmt` alternative.
-
-  std::any visitForStmt(mapParser::ForStmtContext *context) override; //!< Visitor for the `forStmt` alternative.
-
-  std::any visitStmtBlock(mapParser::StmtBlockContext *context) override; //!< Visitor for the `stmtBlock` alternative.
-
-  std::any visitRegionBlock(mapParser::RegionBlockContext *context) override; //!< Visitor for the `regionBlock` alternative.
 
   /**
    * @brief Cleans up the map visitor.

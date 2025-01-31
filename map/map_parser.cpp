@@ -53,27 +53,12 @@ map_desc map_desc::parse_from(const std::string &asset) {
     visitor.requires_instanced_highlight.clear();
   }
 
-  std::vector<voxel_ref> voxels;
-  voxels.reserve(visitor.voxels.size());
-
-  for (auto &[vox, pos] : visitor.voxels) {
-    auto [back, spot, fac, alpha, beta, delta] = vox;
-    glm::mat4x3 tiers(0.0f);
-    for (int i = 0; i < 4; i++) {
-      tiers[i] = glm::vec3(alpha[i], beta[i], delta[i]);
-    }
-
-    voxels.push_back(render_cache::construct<voxel_group>(back, spot, fac, pos, tiers));
-  }
-
   return {
     .scene = {visitor.spawned.begin(), visitor.spawned.end()},
     .scene_instances = { visitor.spawned_instances.begin(), visitor.spawned_instances.end() },
     .requires_highlight = std::move(visitor.requires_highlight),
     .requires_instanced_highlight = std::move(visitor.requires_instanced_highlight),
     .highlight_binding = visitor.highlight_binding,
-    .voxels = std::move(voxels),
-    .perlin_scale = visitor.perlin_scale,
     .show_axes = visitor.show_axes
   };
 }

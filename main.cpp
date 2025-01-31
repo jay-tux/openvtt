@@ -25,26 +25,8 @@ int main(int argc, const char **argv) {
     requires_highlight,
     requires_instanced_highlight,
     highlight_binding,
-    voxels,
-    perlin_scale,
     enable_axes
   ] = map_desc::parse_from("examples/suzannes");
-  log<log_type::DEBUG>("main", std::format("Map has {} voxel groups.", voxels.size()));
-
-  const auto voxel_shader = render_cache::load<shader>("voxel", "voxel");
-  voxel_shader->set_float(voxel_shader->loc_for("perlin_scale"), perlin_scale);
-
-  log<log_type::DEBUG>("main", "Tiered Perlin formulae:");
-  for (const auto &v: voxels) {
-    log<log_type::DEBUG>("main", std::format(
-      "    (({} * noise(xy * {} + {}) + ({} * noise(xy * {} + {}) + ({} * noise(xy * {} + {}) + ({} * noise(xy * {} + {})) / {}",
-      v->tiered_perlin[0][0], v->tiered_perlin[0][1], v->tiered_perlin[0][2],
-      v->tiered_perlin[1][0], v->tiered_perlin[1][1], v->tiered_perlin[1][2],
-      v->tiered_perlin[2][0], v->tiered_perlin[2][1], v->tiered_perlin[2][2],
-      v->tiered_perlin[3][0], v->tiered_perlin[3][1], v->tiered_perlin[3][2],
-      v->tiered_perlin[0][0] + v->tiered_perlin[1][0] + v->tiered_perlin[2][0] + v->tiered_perlin[3][0]
-    ));
-  }
 
   auto cam = camera{};
 
@@ -97,10 +79,6 @@ int main(int argc, const char **argv) {
     }
   });
 
-  const auto voxel_view_loc = voxel_shader->loc_for("view");
-  const auto voxel_proj_loc = voxel_shader->loc_for("projection");
-  const auto lighting_voxels = setup_phong_shading<point_light_count, int>(cam, lights);
-
   using highlighter = hover_highlighter;
 
   axes ax{};
@@ -134,13 +112,6 @@ int main(int argc, const char **argv) {
     for (const auto &[r, l] : set_inst_highlight) {
       curr_instanced = l;
       r->draw(cam, lighting_instanced_highlight);
-    }
-
-    int i; // ignored
-    lighting_voxels(voxel_shader, i);
-    cam.set_matrices(*voxel_shader, voxel_view_loc, voxel_proj_loc);
-    for (const auto &v: voxels) {
-      v->draw(*voxel_shader);
     }
 
     cache::draw_colliders(cam);

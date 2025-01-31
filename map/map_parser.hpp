@@ -36,8 +36,6 @@ struct map_desc {
   std::unordered_map<renderer::shader_ref, single_highlight> requires_highlight; //!< The renderable objects that require highlighting.
   std::unordered_map<renderer::shader_ref, instanced_highlight> requires_instanced_highlight; //!< The instanced renderable objects that require highlighting.
   std::optional<int> highlight_binding; //!< The texture slot to which the highlighting FBO texture is bound.
-  std::vector<renderer::voxel_ref> voxels; //!< All the voxels for the scene background.
-  float perlin_scale; //!< The scale for the perlin noise generation.
   bool show_axes; //!< Whether to show the axes' gizmo.
 
   /**
